@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Board",
+  "description": "A kanban-style board that organizes tasks into columns",
+  "allOf": [
+    { "$ref": "https://upjack.dev/schemas/v1/upjack-entity.schema.json" }
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Display name of the board"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the board's purpose"
+    },
+    "columns": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered list of columns on the board",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Machine-readable column identifier"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Human-readable column name"
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Hex color code for the column"
+          },
+          "wip_limit": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Work-in-progress limit (0 means unlimited)"
+          }
+        },
+        "required": ["key", "label"]
+      }
+    },
+    "default_column": {
+      "type": "string",
+      "description": "Key of the column where new tasks are placed by default"
+    }
+  },
+  "required": ["name", "columns"]
+}

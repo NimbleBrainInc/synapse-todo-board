@@ -1,0 +1,33 @@
+[
+  {
+    "id": "bd_00000000000000000000SEED01",
+    "type": "board",
+    "version": 1,
+    "name": "Current Sprint",
+    "description": "Active sprint — two-week cycle with WIP limits on In Progress and Review.",
+    "columns": [
+      { "key": "backlog", "label": "Backlog", "color": "#6B7280" },
+      { "key": "in_progress", "label": "In Progress", "color": "#3B82F6", "wip_limit": 3 },
+      { "key": "review", "label": "Review", "color": "#F59E0B", "wip_limit": 2 },
+      { "key": "done", "label": "Done", "color": "#10B981" }
+    ],
+    "default_column": "backlog",
+    "tags": ["sample"],
+    "status": "active"
+  },
+  {
+    "id": "bd_00000000000000000000SEED02",
+    "type": "board",
+    "version": 1,
+    "name": "Personal",
+    "description": "Personal tasks, errands, and life admin.",
+    "columns": [
+      { "key": "todo", "label": "To Do", "color": "#6B7280" },
+      { "key": "doing", "label": "Doing", "color": "#3B82F6" },
+      { "key": "done", "label": "Done", "color": "#10B981" }
+    ],
+    "default_column": "todo",
+    "tags": ["sample"],
+    "status": "active"
+  }
+]

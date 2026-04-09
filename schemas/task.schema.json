@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task",
+  "description": "A task or work item that belongs to a board column",
+  "allOf": [
+    { "$ref": "https://upjack.dev/schemas/v1/upjack-entity.schema.json" }
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Short summary of what needs to be done"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description or notes about the task"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "none"],
+      "default": "none",
+      "description": "Task priority level"
+    },
+    "column": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Key of the board column this task belongs to"
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sort order within the column (lower is higher)"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date by which the task should be completed"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp when the task was marked complete"
+    },
+    "assignee": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Person or agent assigned to the task"
+    },
+    "effort": {
+      "type": "string",
+      "enum": ["trivial", "small", "medium", "large", "epic"],
+      "description": "Estimated effort to complete the task"
+    },
+    "board_name": {
+      "type": "string",
+      "description": "Board name (denormalized for quick access)"
+    }
+  },
+  "required": ["title", "column"]
+}

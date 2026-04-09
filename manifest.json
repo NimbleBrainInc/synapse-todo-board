@@ -1,0 +1,120 @@
+{
+  "manifest_version": "0.4",
+  "name": "@nimblebraininc/synapse-todo-board",
+  "version": "1.0.0",
+  "description": "Kanban-style task manager with board and table views, AI-powered triage, and daily reviews",
+  "author": {
+    "name": "NimbleBrain Inc."
+  },
+  "server": {
+    "type": "python",
+    "entry_point": "synapse_todo_board.server",
+    "mcp_config": {
+      "command": "python",
+      "args": ["-m", "synapse_todo_board.server"]
+    }
+  },
+  "_meta": {
+    "ai.nimblebrain/synapse": {
+      "name": "Todo Board",
+      "icon": "list-checks",
+      "placements": [
+        {
+          "slot": "sidebar.apps",
+          "resourceUri": "ui://todo-board/main",
+          "route": "@nimblebraininc/todo-board",
+          "label": "Todo Board",
+          "icon": "list-checks"
+        }
+      ]
+    },
+    "ai.nimblebrain/upjack": {
+      "upjack_version": "0.1",
+      "namespace": "apps/todo-board",
+      "display": {
+        "name": "Todo Board",
+        "icon": "\u2705",
+        "category": "operations"
+      },
+      "entities": [
+        {
+          "name": "board",
+          "plural": "boards",
+          "schema": "schemas/board.schema.json",
+          "prefix": "bd",
+          "index": true
+        },
+        {
+          "name": "task",
+          "plural": "tasks",
+          "schema": "schemas/task.schema.json",
+          "prefix": "tk",
+          "index": true,
+          "tools": ["get", "update", "list", "search", "delete", "query_by_relationship", "get_related", "get_composite"]
+        }
+      ],
+      "skills": [
+        {
+          "source": "bundled",
+          "path": "skills/task-triage/SKILL.md"
+        }
+      ],
+      "hooks": [
+        {
+          "event": "entity.created",
+          "entity": "task",
+          "skill": "bundled:task-triage"
+        },
+        {
+          "event": "entity.updated",
+          "entity": "task",
+          "condition": "$.column changed",
+          "skill": "bundled:task-triage"
+        }
+      ],
+      "schedules": [
+        {
+          "name": "daily-review",
+          "cron": "0 9 * * 1-5",
+          "skill": "bundled:task-triage",
+          "description": "Weekday morning review: flag overdue, stalled, and WIP-exceeded tasks"
+        }
+      ],
+      "views": [
+        {
+          "name": "all-tasks",
+          "entity": "task",
+          "description": "All active tasks by priority",
+          "filter": "$.status == 'active'",
+          "sort": "-priority, position"
+        },
+        {
+          "name": "overdue",
+          "entity": "task",
+          "description": "Overdue tasks, oldest first",
+          "filter": "$.status == 'active' AND $.due_date < today",
+          "sort": "due_date"
+        },
+        {
+          "name": "my-tasks",
+          "entity": "task",
+          "description": "Assigned tasks by priority",
+          "filter": "$.status == 'active' AND $.assignee != null",
+          "sort": "-priority"
+        },
+        {
+          "name": "board-tasks",
+          "entity": "task",
+          "description": "Tasks for a specific board, ordered by position",
+          "filter": "$.status == 'active' AND $.relationships[rel=belongs_to].target == {board_id}",
+          "sort": "position"
+        }
+      ],
+      "context": "context.md",
+      "seed": {
+        "data": "seed/",
+        "run_on_install": true
+      }
+    }
+  }
+}
