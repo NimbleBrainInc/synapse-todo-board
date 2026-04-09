@@ -6,6 +6,10 @@
   "author": {
     "name": "NimbleBrain Inc."
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NimbleBrainInc/synapse-todo-board"
+  },
   "server": {
     "type": "python",
     "entry_point": "synapse_todo_board.server",
@@ -15,18 +19,62 @@
     }
   },
   "_meta": {
-    "ai.nimblebrain/synapse": {
+    "org.mpaktrust": {
+      "mtf_version": "0.1",
+      "permissions": {
+        "filesystem": "read",
+        "network": "none",
+        "environment": "read",
+        "subprocess": "none",
+        "native": "none"
+      }
+    },
+    "ai.nimblebrain/host": {
+      "host_version": "1.0",
       "name": "Todo Board",
       "icon": "list-checks",
+      "category": "operations",
       "placements": [
         {
           "slot": "sidebar.apps",
           "resourceUri": "ui://todo-board/main",
-          "route": "@nimblebraininc/todo-board",
+          "route": "@nimblebraininc/synapse-todo-board",
           "label": "Todo Board",
           "icon": "list-checks"
         }
-      ]
+      ],
+      "briefing": {
+        "priority": "medium",
+        "facets": [
+          {
+            "name": "completed_tasks",
+            "label": "Completed",
+            "type": "activity",
+            "entity": "task",
+            "query": { "completed_at": { "$gte": "${period.since}" } },
+            "metric": "count",
+            "description": "Tasks completed in this period"
+          },
+          {
+            "name": "blocked_tasks",
+            "label": "Blocked",
+            "type": "attention",
+            "entity": "task",
+            "query": { "column": "blocked", "status": "active" },
+            "metric": "count",
+            "description": "Tasks stuck in blocked column"
+          },
+          {
+            "name": "due_today",
+            "label": "Due today",
+            "type": "upcoming",
+            "entity": "task",
+            "query": { "due_date": "${today}", "completed_at": null },
+            "metric": "count",
+            "description": "Tasks due today that aren't done"
+          }
+        ]
+      }
     },
     "ai.nimblebrain/upjack": {
       "upjack_version": "0.1",

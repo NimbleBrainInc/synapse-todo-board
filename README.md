@@ -1,6 +1,13 @@
 # Todo Board
 
+[![mpak](https://img.shields.io/badge/mpak-registry-blue)](https://mpak.dev/packages/@nimblebraininc/synapse-todo-board?utm_source=github&utm_medium=readme&utm_campaign=synapse-todo-board)
+[![NimbleBrain](https://img.shields.io/badge/NimbleBrain-nimblebrain.ai-purple)](https://nimblebrain.ai?utm_source=github&utm_medium=readme&utm_campaign=synapse-todo-board)
+[![Discord](https://img.shields.io/badge/Discord-community-5865F2)](https://nimblebrain.ai/discord?utm_source=github&utm_medium=readme&utm_campaign=synapse-todo-board)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Kanban-style task manager with table and drag-and-drop board views, built on Upjack.
+
+**[View on mpak registry](https://mpak.dev/packages/@nimblebraininc/synapse-todo-board?utm_source=github&utm_medium=readme&utm_campaign=synapse-todo-board)** | **Built by [NimbleBrain](https://nimblebrain.ai?utm_source=github&utm_medium=readme&utm_campaign=synapse-todo-board)**
 
 ## Entities
 

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://schemas.nimblebrain.ai/v1/nimblebrain-server.schema.json",
+  "name": "ai.nimblebrain/synapse-todo-board",
+  "description": "Kanban-style task manager with board and table views, AI-powered triage, and daily reviews",
+  "version": "0.1.0",
+  "title": "Todo Board Synapse App",
+  "repository": {
+    "url": "https://github.com/NimbleBrainInc/synapse-todo-board",
+    "source": "https://github.com/NimbleBrainInc/synapse-todo-board"
+  },
+  "_meta": {
+    "ai.nimblebrain/v1": {
+      "runtime": "python:3.13",
+      "capabilities": {
+        "tools": true,
+        "resources": true,
+        "prompts": false
+      },
+      "display": {
+        "category": "operations",
+        "tags": [
+          "synapse",
+          "kanban",
+          "task-manager",
+          "upjack",
+          "ui"
+        ]
+      },
+      "deployment": {
+        "protocol": "http",
+        "port": 8000,
+        "mcpPath": "/mcp"
+      },
+      "container": {
+        "healthCheck": {
+          "path": "/health",
+          "port": 8000
+        }
+      },
+      "resources": {
+        "limits": {
+          "memory": "512Mi",
+          "cpu": "1000m"
+        },
+        "requests": {
+          "memory": "256Mi",
+          "cpu": "250m"
+        }
+      },
+      "scaling": {
+        "minReplicas": 1,
+        "maxReplicas": 3
+      }
+    }
+  }
+}
