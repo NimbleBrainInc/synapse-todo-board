@@ -1,6 +1,6 @@
 [project]
 name = "synapse-todo-board"
-version = "1.0.0"
+version = "0.1.0"
 description = "Kanban-style task manager with table and drag-and-drop board views"
 requires-python = ">=3.13"
 dependencies = [
