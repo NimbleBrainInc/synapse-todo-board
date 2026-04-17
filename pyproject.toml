@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Kanban-style task manager with table and drag-and-drop board views"
 requires-python = ">=3.13"
 dependencies = [
-    "upjack[mcp]>=0.2.0",
+    "upjack[mcp]>=0.5.1",
 ]
 
 [build-system]
@@ -13,3 +13,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/synapse_todo_board"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.ruff]
+line-length = 100
