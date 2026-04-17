@@ -218,16 +218,11 @@ class TestCreateBoardTask:
         rels = task.get("relationships", [])
         assert any(r["rel"] == "belongs_to" and r["target"] == board["id"] for r in rels)
 
-    @pytest.mark.xfail(
-        reason=(
-            "create_board_task does not validate `column` against "
-            "board.columns — only the regex pattern is enforced by the "
-            "schema. Flagged for follow-up; see tool source."
-        ),
-        strict=False,
-    )
     def test_validates_column_exists(self, mcp):
-        """Known gap: tool accepts any regex-valid column key."""
+        """Tool rejects column keys that aren't declared on the board,
+        preventing tasks from being orphaned into buckets the UI can't
+        render.
+        """
         board = _make_board(mcp)
 
         result = _run(
@@ -242,34 +237,35 @@ class TestCreateBoardTask:
             )
         )
         assert "error" in result
+        assert "nonexistent_column" in result["error"]
 
-    def test_sequential_creates_are_orderable(self, mcp):
-        """Sequential creates in the same column produce tasks whose
-        positions are either all unset (None) or monotonically
-        non-decreasing. If positions get assigned non-deterministically
-        the test catches it.
-
-        Acceptance-criteria wrinkle: the tool does NOT actively auto-set
-        `position` during create (only `reorder_column` and `move_task`
-        write positions). We still verify the creation sequence is
-        preserved via the shared relationship index so agents can
-        display a stable order.
+    def test_auto_sets_position(self, mcp):
+        """Sequential creates in the same column land at positions 0, 1, 2…
+        so agents and UIs can rely on creation order without an explicit
+        reorder_column call.
         """
         board = _make_board(mcp)
 
         created = [_make_task(mcp, board["id"], title=f"Seq {i}", column="todo") for i in range(3)]
 
-        positions = [t.get("position") for t in created]
-        if all(p is not None for p in positions):
-            assert positions == sorted(positions), f"positions not monotonic: {positions}"
+        positions = [t["position"] for t in created]
+        assert positions == [0, 1, 2], f"positions not monotonic from 0: {positions}"
 
-        # Creation order is preserved in the board's task list regardless.
-        listed = _run(_call_tool(mcp, "list_tasks", {}))
-        entities = listed["entities"] if isinstance(listed, dict) else listed
-        created_ids = [t["id"] for t in created]
-        present = [t["id"] for t in entities if t["id"] in created_ids]
-        # All three created tasks surface in list_tasks.
-        assert set(present) == set(created_ids)
+    def test_auto_position_is_column_scoped(self, mcp):
+        """Auto-position is computed per-column, not across the whole
+        board. Creating in column B after three in column A starts at 0,
+        not 3.
+        """
+        board = _make_board(mcp)
+
+        for i in range(3):
+            _make_task(mcp, board["id"], title=f"Todo {i}", column="todo")
+        first_in_progress = _make_task(
+            mcp, board["id"], title="First in progress", column="in_progress"
+        )
+
+        assert first_in_progress["position"] == 0
+
 
 
 # ---------------------------------------------------------------------------
