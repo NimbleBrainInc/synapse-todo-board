@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.4",
   "name": "@nimblebraininc/synapse-todo-board",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Kanban-style task manager with board and table views, AI-powered triage, and daily reviews",
   "author": {
     "name": "NimbleBrain Inc."
@@ -15,7 +15,10 @@
     "entry_point": "synapse_todo_board.server",
     "mcp_config": {
       "command": "python",
-      "args": ["-m", "synapse_todo_board.server"]
+      "args": [
+        "-m",
+        "synapse_todo_board.server"
+      ]
     }
   },
   "_meta": {
@@ -51,7 +54,11 @@
             "label": "Completed",
             "type": "activity",
             "entity": "task",
-            "query": { "completed_at": { "$gte": "${period.since}" } },
+            "query": {
+              "completed_at": {
+                "$gte": "${period.since}"
+              }
+            },
             "metric": "count",
             "description": "Tasks completed in this period"
           },
@@ -60,7 +67,10 @@
             "label": "Blocked",
             "type": "attention",
             "entity": "task",
-            "query": { "column": "blocked", "status": "active" },
+            "query": {
+              "column": "blocked",
+              "status": "active"
+            },
             "metric": "count",
             "description": "Tasks stuck in blocked column"
           },
@@ -69,7 +79,10 @@
             "label": "Due today",
             "type": "upcoming",
             "entity": "task",
-            "query": { "due_date": "${today}", "completed_at": null },
+            "query": {
+              "due_date": "${today}",
+              "completed_at": null
+            },
             "metric": "count",
             "description": "Tasks due today that aren't done"
           }
@@ -81,7 +94,7 @@
       "namespace": "apps/todo-board",
       "display": {
         "name": "Todo Board",
-        "icon": "\u2705",
+        "icon": "✅",
         "category": "operations"
       },
       "entities": [
@@ -98,7 +111,16 @@
           "schema": "schemas/task.schema.json",
           "prefix": "tk",
           "index": true,
-          "tools": ["get", "update", "list", "search", "delete", "query_by_relationship", "get_related", "get_composite"]
+          "tools": [
+            "get",
+            "update",
+            "list",
+            "search",
+            "delete",
+            "query_by_relationship",
+            "get_related",
+            "get_composite"
+          ]
         }
       ],
       "skills": [
