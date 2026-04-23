@@ -109,6 +109,7 @@ def test_hand_written_tools_registered(mcp):
     """All 6 custom domain tools are registered."""
     listed = _run(_list_tool_names(mcp))
     expected = {
+        "archive_task",
         "batch_archive",
         "board_summary",
         "create_board_task",
@@ -163,3 +164,94 @@ def test_legacy_data_wrapper_rejected(mcp):
                 },
             )
         )
+
+
+# ---------------------------------------------------------------------------
+# Regression locks for the 0.2.1 UI contract fixes.
+#
+# Each pair below pins both sides of a bug we just fixed: the flat-kwargs
+# shape the UI now uses works end-to-end, AND the legacy shape it used to
+# ship with fails validation. Together they make silent drift loud — a
+# future Upjack upgrade or a partial revert of the UI fix would light up
+# one of these tests instead of waiting for a customer to notice.
+# ---------------------------------------------------------------------------
+
+
+def _seed_board_and_task(mcp) -> tuple[str, str]:
+    """Create a board + one task. Returns (board_id, task_id)."""
+    board = _run(
+        _call_tool(
+            mcp,
+            "create_board",
+            {"name": "B", "columns": [{"key": "todo", "label": "To Do"}]},
+        )
+    )
+    task = _run(
+        _call_tool(
+            mcp,
+            "create_board_task",
+            {"board_id": board["id"], "title": "Original"},
+        )
+    )
+    return board["id"], task["id"]
+
+
+def test_update_task_flat_kwargs_succeeds(mcp):
+    """`update_task` accepts flat kwargs and mutates the targeted fields.
+
+    Locks in the UI's current call shape: `{task_id, ...flat_fields}`.
+    """
+    _, task_id = _seed_board_and_task(mcp)
+    updated = _run(
+        _call_tool(
+            mcp,
+            "update_task",
+            {"task_id": task_id, "title": "Updated", "priority": "high"},
+        )
+    )
+    assert updated["title"] == "Updated"
+    assert updated["priority"] == "high"
+
+
+def test_update_task_entity_id_wrapper_shape_rejected(mcp):
+    """The UI's pre-fix shape `{entity_id, data: {...}}` fails validation.
+
+    `task_id` is the schema's required id param; `entity_id` is not a
+    recognized property, so schema validation fails before dispatch.
+    """
+    with pytest.raises(ToolError):
+        _run(
+            _call_tool(
+                mcp,
+                "update_task",
+                {"entity_id": "tk_01HXXX", "data": {"title": "ignored"}},
+            )
+        )
+
+
+def test_delete_board_by_board_id_succeeds(mcp):
+    """`delete_board` accepts `board_id` and soft-deletes the target."""
+    board = _run(
+        _call_tool(
+            mcp,
+            "create_board",
+            {"name": "Doomed", "columns": [{"key": "todo", "label": "To Do"}]},
+        )
+    )
+    _run(_call_tool(mcp, "delete_board", {"board_id": board["id"]}))
+
+    # Default `list_boards` filters to status=active; soft-deleted boards
+    # should no longer appear.
+    listing = _run(_call_tool(mcp, "list_boards"))
+    remaining = {b["id"] for b in listing.get("boards", [])}
+    assert board["id"] not in remaining
+
+
+def test_delete_board_entity_id_rejected(mcp):
+    """The UI's pre-fix shape `{entity_id: ...}` fails validation.
+
+    Auto-generated delete tools use `{name}_id` (here: `board_id`) as the
+    required id param. `entity_id` isn't a property of the schema.
+    """
+    with pytest.raises(ToolError):
+        _run(_call_tool(mcp, "delete_board", {"entity_id": "bd_01HXXX"}))

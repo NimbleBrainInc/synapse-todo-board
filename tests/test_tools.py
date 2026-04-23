@@ -170,6 +170,40 @@ class TestBatchArchive:
 # ---------------------------------------------------------------------------
 
 
+class TestArchiveTask:
+    """Single-task archive — flips status to 'archived' for UI archive buttons.
+
+    Exists because `update_task`'s inputSchema doesn't expose the base-entity
+    `status` field; the UI couldn't archive via `update_task` alone.
+    """
+
+    def test_flips_status_to_archived(self, mcp):
+        board = _make_board(mcp)
+        task = _make_task(mcp, board["id"], title="To archive")
+
+        result = _run(_call_tool(mcp, "archive_task", {"task_id": task["id"]}))
+
+        assert result["status"] == "archived"
+        assert result["id"] == task["id"]
+
+    def test_archived_task_filters_out_of_active_list(self, mcp):
+        board = _make_board(mcp)
+        task = _make_task(mcp, board["id"], title="To archive")
+
+        _run(_call_tool(mcp, "archive_task", {"task_id": task["id"]}))
+
+        listing = _run(_call_tool(mcp, "list_tasks"))
+        remaining = {t["id"] for t in listing.get("tasks", [])}
+        assert task["id"] not in remaining
+
+    def test_missing_task_returns_error(self, mcp):
+        result = _run(_call_tool(mcp, "archive_task", {"task_id": "tk_DOESNOTEXIST"}))
+        assert "error" in result
+
+
+# ---------------------------------------------------------------------------
+
+
 class TestBoardSummary:
     def test_aggregates_task_count_per_column(self, mcp):
         board = _make_board(mcp)

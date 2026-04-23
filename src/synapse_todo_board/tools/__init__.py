@@ -3,6 +3,7 @@
 Exports register_tools() which binds all tool functions to the MCP server.
 """
 
+from synapse_todo_board.tools.archive_task import archive_task
 from synapse_todo_board.tools.batch_archive import batch_archive
 from synapse_todo_board.tools.board_summary import board_summary
 from synapse_todo_board.tools.create_board_task import create_board_task
@@ -124,3 +125,15 @@ def register_tools(mcp, app):
         older_than_days: int = 7,
     ) -> dict:
         return batch_archive(app, board_id, older_than_days)
+
+    @mcp.tool(
+        name="archive_task",
+        description=(
+            "Archive a single task by flipping its status to 'archived'. "
+            "Archived tasks are filtered out of the active board view. "
+            "Use this instead of update_task when the intent is to archive — "
+            "update_task cannot write status (it's an Upjack base-entity field)."
+        ),
+    )
+    def _archive_task(task_id: str) -> dict:
+        return archive_task(app, task_id)

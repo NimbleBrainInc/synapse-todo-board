@@ -108,9 +108,8 @@ export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onS
     setSaving(true);
     setError(null);
     try {
-      const result = await synapse.callTool("update_task", {
+      const result = await synapse.callTool("archive_task", {
         task_id: task.id,
-        status: "archived",
       });
       if (result.isError) {
         setError(String(result.data));
