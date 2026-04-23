@@ -769,17 +769,17 @@ export default function App() {
       effort: string;
     }) => {
       if (!selectedBoardId) return;
-      const taskData: Record<string, unknown> = {
+      const args: Record<string, unknown> = {
+        board_id: selectedBoardId,
         title: data.title,
         column: data.column,
         priority: data.priority,
-        relationships: [{ rel: "belongs_to", target: selectedBoardId }],
       };
-      if (data.assignee) taskData.assignee = data.assignee;
-      if (data.due_date) taskData.due_date = data.due_date;
-      if (data.effort) taskData.effort = data.effort;
+      if (data.assignee) args.assignee = data.assignee;
+      if (data.due_date) args.due_date = data.due_date;
+      if (data.effort) args.effort = data.effort;
 
-      const result = await synapse.callTool("create_task", { data: taskData });
+      const result = await synapse.callTool("create_board_task", args);
       if (result.isError) {
         throw new Error(String(result.data));
       }

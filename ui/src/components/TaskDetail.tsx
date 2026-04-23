@@ -20,7 +20,7 @@ const EFFORTS = ["trivial", "small", "medium", "large", "epic"] as const;
 /**
  * Modal/slide-over panel for editing or creating a single task.
  * Edit mode: task prop is provided. Save calls update_task (and move_task if column changed).
- * Create mode: task prop is null/undefined. Save calls create_task with board relationship.
+ * Create mode: task prop is null/undefined. Save calls create_board_task, which wires the board relationship.
  * Escape key or close button dismisses.
  */
 export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onSaved, isDark, accentColor = "#2563eb" }: TaskDetailProps) {
@@ -53,18 +53,16 @@ export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onS
     setError(null);
     try {
       if (isCreate) {
-        // Create mode
-        const result = await synapse.callTool("create_task", {
-          data: {
-            title,
-            description: description || undefined,
-            priority,
-            column,
-            assignee: assignee || undefined,
-            due_date: dueDate || undefined,
-            effort: effort || undefined,
-            relationships: [{ rel: "belongs_to", target: boardId }],
-          },
+        // Create mode — custom tool that validates column + wires belongs_to
+        const result = await synapse.callTool("create_board_task", {
+          board_id: boardId,
+          title,
+          description: description || undefined,
+          priority,
+          column: column || undefined,
+          assignee: assignee || undefined,
+          due_date: dueDate || undefined,
+          effort: effort || undefined,
         });
 
         if (result.isError) {
