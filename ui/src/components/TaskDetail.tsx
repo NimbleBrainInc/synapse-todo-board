@@ -59,6 +59,7 @@ export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onS
           title,
           description: description || undefined,
           priority,
+          // Empty string → omit so server picks the board's default column
           column: column || undefined,
           assignee: assignee || undefined,
           due_date: dueDate || undefined,

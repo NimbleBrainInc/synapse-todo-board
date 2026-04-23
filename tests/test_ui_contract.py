@@ -192,7 +192,11 @@ def test_every_ui_call_tool_is_listed(mcp):
         for name, paths in sorted(unknown.items()):
             locs = ", ".join(str(p) for p in paths)
             lines.append(f"  - {name!r} called from {locs}")
-        lines.append(f"Listed tools ({len(listed)}): {sorted(listed)}")
+        # Cap the "available tools" hint so CI logs don't drown on large apps.
+        preview_limit = 40
+        preview = sorted(listed)[:preview_limit]
+        suffix = f" (+{len(listed) - preview_limit} more)" if len(listed) > preview_limit else ""
+        lines.append(f"Listed tools ({len(listed)}): {preview}{suffix}")
         raise AssertionError("\n".join(lines))
 
 
