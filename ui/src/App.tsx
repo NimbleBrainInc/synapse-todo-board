@@ -730,11 +730,9 @@ export default function App() {
   const handleCreateBoard = useCallback(
     async (name: string, description: string, columns: BoardColumn[]) => {
       const result = await synapse.callTool("create_board", {
-        data: {
-          name,
-          description: description || undefined,
-          columns: columns.map((c) => ({ key: c.key, label: c.label })),
-        },
+        name,
+        description: description || undefined,
+        columns: columns.map((c) => ({ key: c.key, label: c.label })),
       });
       if (result.isError) {
         throw new Error(String(result.data));
@@ -809,7 +807,7 @@ export default function App() {
     const board = boards.find((b) => b.id === selectedBoardId);
     if (!confirm(`Delete board "${board?.name}"? All tasks on this board will be orphaned.`)) return;
     try {
-      await synapse.callTool("delete_board", { entity_id: selectedBoardId });
+      await synapse.callTool("delete_board", { board_id: selectedBoardId });
       setSelectedBoardId(null);
       await refreshBoards();
     } catch (err) {

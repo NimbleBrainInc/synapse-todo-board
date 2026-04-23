@@ -79,15 +79,13 @@ export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onS
         }
 
         const result = await synapse.callTool("update_task", {
-          entity_id: task.id,
-          data: {
-            title,
-            description: description || undefined,
-            priority,
-            assignee: assignee || undefined,
-            due_date: dueDate || undefined,
-            effort: effort || undefined,
-          },
+          task_id: task.id,
+          title,
+          description: description || undefined,
+          priority,
+          assignee: assignee || undefined,
+          due_date: dueDate || undefined,
+          effort: effort || undefined,
         });
 
         if (result.isError) {
@@ -112,7 +110,7 @@ export function TaskDetail({ task, columns, boardId, defaultColumn, onClose, onS
     try {
       const result = await synapse.callTool("update_task", {
         task_id: task.id,
-        data: { status: "archived" },
+        status: "archived",
       });
       if (result.isError) {
         setError(String(result.data));
