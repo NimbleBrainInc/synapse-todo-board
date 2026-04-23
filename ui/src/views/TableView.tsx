@@ -384,7 +384,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
       if (field === "column") {
         await callTool("move_task", { task_id: taskId, target_column: value });
       } else {
-        await callTool("update_task", { task_id: taskId, data: { [field]: value } });
+        await callTool("update_task", { task_id: taskId, [field]: value });
       }
       onRefresh?.();
     },
@@ -405,7 +405,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
   const handleBulkPriority = useCallback(
     async (priority: string) => {
       const ids = Array.from(selected);
-      await Promise.all(ids.map((id) => callTool("update_task", { task_id: id, data: { priority } })));
+      await Promise.all(ids.map((id) => callTool("update_task", { task_id: id, priority })));
       setSelected(new Set());
       onRefresh?.();
     },
@@ -414,7 +414,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
 
   const handleBulkArchive = useCallback(async () => {
     const ids = Array.from(selected);
-    await Promise.all(ids.map((id) => callTool("update_task", { task_id: id, data: { status: "archived" } })));
+    await Promise.all(ids.map((id) => callTool("archive_task", { task_id: id })));
     setSelected(new Set());
     onRefresh?.();
   }, [selected, callTool, onRefresh]);

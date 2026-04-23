@@ -2,7 +2,7 @@
   "$schema": "https://schemas.nimblebrain.ai/v1/nimblebrain-server.schema.json",
   "name": "ai.nimblebrain/synapse-todo-board",
   "description": "Kanban-style task manager with board and table views, AI-powered triage, and daily reviews",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "Todo Board Synapse App",
   "repository": {
     "url": "https://github.com/NimbleBrainInc/synapse-todo-board",
