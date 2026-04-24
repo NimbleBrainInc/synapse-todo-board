@@ -1,23 +1,31 @@
-.venv/
-.git/
-.github/
-.pytest_cache/
+# mcpb pack loads this file and treats each pattern as gitignore-style.
+# Gitignore rule that bites: a pattern without a leading `/` matches
+# anywhere in the tree, including inside `deps/` / `node_modules/`.
+# Unanchored `tests/` or `conftest.py` strips vendored runtime modules
+# and breaks imports at bundle startup. Project-only patterns are
+# anchored with `/` below; cross-tree hygiene (`__pycache__`, `*.pyc`,
+# `.DS_Store`) is left unanchored intentionally.
+
+/.venv/
+/.git/
+/.github/
+/.pytest_cache/
 __pycache__/
 *.pyc
-.ruff_cache/
-tests/
-workspace/
+/.ruff_cache/
+/tests/
+/workspace/
 ui/node_modules/
 ui/src/
 ui/.vite/
-build/
+/build/
 *.egg-info/
 *.mcpb
-Makefile
-pyproject.toml
-.env
-.env.*
-uv.lock
-scripts/
-.claude/
-CLAUDE.md
+/Makefile
+/pyproject.toml
+/.env
+/.env.*
+/uv.lock
+/scripts/
+/.claude/
+/CLAUDE.md
