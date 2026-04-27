@@ -44,6 +44,13 @@
           "route": "@nimblebraininc/synapse-todo-board",
           "label": "Todo Board",
           "icon": "list-checks"
+        },
+        {
+          "slot": "settings",
+          "resourceUri": "ui://todo-board/settings",
+          "label": "Todo Board",
+          "icon": "list-checks",
+          "priority": 100
         }
       ],
       "briefing": {
