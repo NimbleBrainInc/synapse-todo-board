@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.4",
   "name": "@nimblebraininc/synapse-todo-board",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Kanban-style task manager with board and table views, AI-powered triage, and daily reviews",
   "author": {
     "name": "NimbleBrain Inc."
