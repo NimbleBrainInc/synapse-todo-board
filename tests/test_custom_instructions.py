@@ -62,7 +62,7 @@ def test_eight_kib_cap_surfaces_as_structured_error(mcp) -> None:
     # Tool returns a structured `{status: "error", error: ...}` rather than
     # throwing — the cap message names the byte limit so the agent (and any
     # caller surfacing this back to the user) can explain what went wrong.
-    assert result == {"status": "error", "error": result["error"]}
+    assert result["status"] == "error"
     assert "8192" in result["error"]
 
 

@@ -97,21 +97,6 @@ async def set_custom_instructions(text: str) -> dict[str, str]:
         return {"status": "error", "error": str(err)}
 
 
-@mcp.resource("ui://todo-board/settings")
-def todo_board_settings_ui() -> str:
-    """Custom-instructions editor — rendered at /settings/apps/synapse-todo-board.
-
-    Inline HTML for now (no separate ui/settings.html build). Communicates
-    with the bundle via the platform's iframe postMessage bridge — same
-    pattern Collateral's inline settings page uses.
-    """
-    return _SETTINGS_HTML
-
-
-# ASGI entrypoint (uvicorn / nimbletools-core)
-app = mcp.http_app()
-
-
 _SETTINGS_HTML = """\
 <!DOCTYPE html>
 <html lang="en">
@@ -265,6 +250,21 @@ _SETTINGS_HTML = """\
 </body>
 </html>
 """
+
+
+@mcp.resource("ui://todo-board/settings")
+def todo_board_settings_ui() -> str:
+    """Custom-instructions editor — rendered at /settings/apps/synapse-todo-board.
+
+    Inline HTML for now (no separate ui/settings.html build). Communicates
+    with the bundle via the platform's iframe postMessage bridge — same
+    pattern Collateral's inline settings page uses.
+    """
+    return _SETTINGS_HTML
+
+
+# ASGI entrypoint (uvicorn / nimbletools-core)
+app = mcp.http_app()
 
 
 if __name__ == "__main__":

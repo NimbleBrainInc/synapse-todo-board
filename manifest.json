@@ -25,7 +25,7 @@
     "org.mpaktrust": {
       "mtf_version": "0.1",
       "permissions": {
-        "filesystem": "read",
+        "filesystem": "write",
         "network": "none",
         "environment": "read",
         "subprocess": "none",

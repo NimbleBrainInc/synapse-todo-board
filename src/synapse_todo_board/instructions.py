@@ -48,8 +48,7 @@ def write_custom_instructions(workspace_root: str | Path, text: str) -> dict[str
     path = _instructions_path(workspace_root)
 
     if text == "":
-        if path.exists():
-            path.unlink()
+        path.unlink(missing_ok=True)
         return {"status": "cleared"}
 
     encoded = text.encode("utf-8")
