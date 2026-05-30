@@ -25,10 +25,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -42,6 +42,6 @@ jobs:
           jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
           jq --arg v "$VERSION" '.version = $v' server.json > server.tmp.json && mv server.tmp.json server.json
 
-      - uses: NimbleBrainInc/mcpb-pack@v2
+      - uses: NimbleBrainInc/mcpb-pack@v3
         with:
           output: "{name}-{version}-${{ matrix.os }}-${{ matrix.arch }}.mcpb"
