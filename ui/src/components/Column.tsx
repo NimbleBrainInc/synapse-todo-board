@@ -2,6 +2,7 @@ import type { CSSProperties, DragEvent } from "react";
 import { useState } from "react";
 import TaskCard from "./TaskCard.js";
 import type { Task } from "./TaskCard.js";
+import { useStyleTokens } from "../tokens";
 
 // -- Types --
 
@@ -15,8 +16,6 @@ export interface ColumnDef {
 export interface ColumnProps {
   column: ColumnDef;
   tasks: Task[];
-  isDark: boolean;
-  accentColor?: string;
   onDrop: (taskId: string, sourceColumn: string, targetColumn: string) => void;
   onTaskClick?: (task: Task) => void;
   onAddTask?: (columnKey: string) => void;
@@ -33,28 +32,27 @@ function getWipStatus(count: number, limit: number | undefined): WipStatus {
   return "ok";
 }
 
-const WIP_COLORS: Record<WipStatus, string> = {
-  ok: "#22c55e",
-  at_limit: "#eab308",
-  exceeded: "#dc2626",
-  unlimited: "transparent",
-};
-
 // -- Component --
 
 export default function Column({
   column,
   tasks,
-  isDark,
-  accentColor = "#2563eb",
   onDrop,
   onTaskClick,
   onAddTask,
 }: ColumnProps) {
+  const t = useStyleTokens();
   const [dragOver, setDragOver] = useState(false);
 
   const sorted = [...tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const wipStatus = getWipStatus(tasks.length, column.wip_limit);
+
+  const WIP_COLORS: Record<WipStatus, string> = {
+    ok: t.success,
+    at_limit: t.warning,
+    exceeded: t.danger,
+    unlimited: "transparent",
+  };
 
   // -- Drag handlers --
 
@@ -93,10 +91,8 @@ export default function Column({
     minWidth: "200px",
     flex: "1 1 272px",
     borderRadius: "8px",
-    background: isDark ? "#16162a" : "#f0f0f5",
-    border: dragOver
-      ? `2px dashed ${accentColor}`
-      : "2px solid transparent",
+    background: t.bgSubtle,
+    border: dragOver ? `2px dashed ${t.accent}` : "2px solid transparent",
     transition: "border-color 0.15s",
   };
 
@@ -110,7 +106,7 @@ export default function Column({
   const labelStyle: CSSProperties = {
     fontSize: "0.8125rem",
     fontWeight: 600,
-    color: isDark ? "#c0c0d0" : "#3a3a5a",
+    color: t.fgMuted,
     textTransform: "uppercase",
     letterSpacing: "0.04em",
   };
@@ -118,7 +114,7 @@ export default function Column({
   const countStyle: CSSProperties = {
     fontSize: "0.6875rem",
     fontWeight: 500,
-    color: isDark ? "#888" : "#888",
+    color: t.fgFaint,
     marginLeft: "auto",
   };
 
@@ -148,10 +144,10 @@ export default function Column({
     gap: "0.25rem",
     padding: "0.375rem",
     margin: "0 0.5rem 0.5rem",
-    border: `1px dashed ${isDark ? "#3d3d5c" : "#c0c0d0"}`,
+    border: `1px dashed ${t.border}`,
     borderRadius: "6px",
     background: "transparent",
-    color: isDark ? "#888" : "#666",
+    color: t.fgMuted,
     fontSize: "0.75rem",
     cursor: "pointer",
     transition: "background 0.15s, color 0.15s",
@@ -188,12 +184,7 @@ export default function Column({
       {/* Task list */}
       <div style={listStyle}>
         {sorted.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            isDark={isDark}
-            onTaskClick={onTaskClick}
-          />
+          <TaskCard key={task.id} task={task} onTaskClick={onTaskClick} />
         ))}
       </div>
 
@@ -202,18 +193,12 @@ export default function Column({
         style={addBtnStyle}
         onClick={() => onAddTask?.(column.key)}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = isDark
-            ? "#1e1e36"
-            : "#e0e0ea";
-          (e.currentTarget as HTMLButtonElement).style.color = isDark
-            ? "#c0c0d0"
-            : "#3a3a5a";
+          (e.currentTarget as HTMLButtonElement).style.background = t.bgHover;
+          (e.currentTarget as HTMLButtonElement).style.color = t.fg;
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-          (e.currentTarget as HTMLButtonElement).style.color = isDark
-            ? "#888"
-            : "#666";
+          (e.currentTarget as HTMLButtonElement).style.color = t.fgMuted;
         }}
       >
         + Add task
