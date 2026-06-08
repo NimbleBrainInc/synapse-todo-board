@@ -774,7 +774,6 @@ export default function App() {
         <TaskDetail
           task={selectedTask}
           columns={selectedBoard.columns}
-          boardId={selectedBoard.id}
           onClose={() => setSelectedTask(null)}
           onSaved={refreshTasks}
         />
