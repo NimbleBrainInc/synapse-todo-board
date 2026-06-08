@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { Badge, TextLink } from "@nimblebrain/synapse/ui";
+import { useStyleTokens } from "../tokens";
 
 // -- Types --
 
@@ -19,8 +21,6 @@ export interface FilterBarProps {
   onChange: (filters: Filters) => void;
   columns: ColumnDef[];
   assignees: string[];
-  isDark: boolean;
-  accentColor?: string;
 }
 
 const PRIORITIES = ["critical", "high", "medium", "low", "none"];
@@ -32,7 +32,8 @@ export const EMPTY_FILTERS: Filters = {
   overdueOnly: false,
 };
 
-export default function FilterBar({ filters, onChange, columns, assignees, isDark, accentColor = "#2563eb" }: FilterBarProps) {
+export default function FilterBar({ filters, onChange, columns, assignees }: FilterBarProps) {
+  const t = useStyleTokens();
   const activeCount = useMemo(() => {
     let count = 0;
     if (filters.priority) count++;
@@ -44,10 +45,11 @@ export default function FilterBar({ filters, onChange, columns, assignees, isDar
 
   const selectStyle: React.CSSProperties = {
     padding: "0.35rem 0.6rem",
-    borderRadius: "5px",
-    border: `1px solid ${isDark ? "#3d3d5c" : "#ccc"}`,
-    background: isDark ? "#1a1a2e" : "#fff",
-    color: isDark ? "#e0e0e0" : "#1a1a2e",
+    borderRadius: "6px",
+    border: `1px solid ${t.border}`,
+    background: t.bgRaised,
+    color: t.fg,
+    fontFamily: t.fontFamily,
     fontSize: "0.8rem",
     minWidth: "120px",
     cursor: "pointer",
@@ -56,7 +58,7 @@ export default function FilterBar({ filters, onChange, columns, assignees, isDar
   const labelStyle: React.CSSProperties = {
     fontSize: "0.75rem",
     fontWeight: 500,
-    color: isDark ? "#aaa" : "#666",
+    color: t.fgMuted,
     marginBottom: "2px",
   };
 
@@ -68,8 +70,8 @@ export default function FilterBar({ filters, onChange, columns, assignees, isDar
         alignItems: "flex-end",
         gap: "0.75rem",
         padding: "0.6rem 1rem",
-        borderBottom: `1px solid ${isDark ? "#2d2d44" : "#e8e8e8"}`,
-        background: isDark ? "#1e1e36" : "#f4f4f8",
+        borderBottom: `1px solid ${t.border}`,
+        background: t.bgSubtle,
         flexWrap: "wrap",
       }}
     >
@@ -132,7 +134,7 @@ export default function FilterBar({ filters, onChange, columns, assignees, isDar
           gap: "0.4rem",
           fontSize: "0.8rem",
           cursor: "pointer",
-          color: isDark ? "#e0e0e0" : "#1a1a2e",
+          color: t.fg,
           paddingBottom: "0.35rem",
         }}
       >
@@ -148,32 +150,10 @@ export default function FilterBar({ filters, onChange, columns, assignees, isDar
       {/* Active filter count + clear */}
       {activeCount > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", paddingBottom: "0.35rem" }}>
-          <span
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              background: isDark ? "#4a4a6a" : accentColor,
-              color: "#fff",
-              borderRadius: "10px",
-              padding: "0.15rem 0.5rem",
-            }}
-          >
-            {activeCount} active
-          </span>
-          <button
-            onClick={() => onChange(EMPTY_FILTERS)}
-            style={{
-              fontSize: "0.75rem",
-              background: "none",
-              border: "none",
-              color: isDark ? "#f87171" : "#dc2626",
-              cursor: "pointer",
-              textDecoration: "underline",
-              padding: 0,
-            }}
-          >
+          <Badge tone="accent">{activeCount} active</Badge>
+          <TextLink tone="danger" onClick={() => onChange(EMPTY_FILTERS)}>
             Clear filters
-          </button>
+          </TextLink>
         </div>
       )}
     </div>
