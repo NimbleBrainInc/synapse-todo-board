@@ -36,7 +36,10 @@ const RESOLVED: ResolvedTokens = {
   bg: ui.bg,
   bgRaised: ui.bgRaised,
   bgSubtle: ui.bgSubtle,
-  bgHover: ui.bgSubtle,
+  // A translucent fg tint, not a fixed surface — so a hover reads on any base
+  // (a button on bgSubtle and a row on bg both get visible feedback). An alias
+  // to bgSubtle disappears against a bgSubtle parent (the column's Add button).
+  bgHover: `color-mix(in oklab, ${ui.fg} 6%, transparent)`,
   fg: ui.fg,
   fgMuted: ui.fgMuted,
   fgFaint: ui.fgFaint,
