@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BoardColumn } from "../hooks/useBoards";
 import type { Task } from "../hooks/useTasks";
 import { useSynapse } from "@nimblebrain/synapse/react";
@@ -36,6 +36,18 @@ export function TaskDetail({ task, columns, onClose, onSaved }: TaskDetailProps)
   const [effort, setEffort] = useState(task.effort ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Present as a bottom sheet on a coarse (touch) pointer; a side sheet otherwise.
+  const [isCoarse, setIsCoarse] = useState(
+    () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia("(pointer: coarse)");
+    const onChange = () => setIsCoarse(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const input = inputStyle(t);
   const label = labelStyle(t);
@@ -97,8 +109,8 @@ export function TaskDetail({ task, columns, onClose, onSaved }: TaskDetailProps)
   }, [synapse, task, onClose, onSaved]);
 
   return (
-    <Drawer open onClose={onClose} width={420}>
-      <Drawer.Header onClose={onClose}>Edit Task</Drawer.Header>
+    <Drawer open onClose={onClose} width={420} side={isCoarse ? "bottom" : "right"}>
+      <Drawer.Header title="Edit Task" onClose={onClose} />
 
       <Drawer.Body>
         <Stack gap="1rem">
