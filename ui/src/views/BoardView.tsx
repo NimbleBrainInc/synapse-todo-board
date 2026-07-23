@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useSynapse, useTheme } from "@nimblebrain/synapse/react";
+import { useSynapse } from "@nimblebrain/synapse/react";
 import Column from "../components/Column.js";
 import type { ColumnDef } from "../components/Column.js";
 import type { Task } from "../components/TaskCard.js";
@@ -17,7 +17,6 @@ export interface Board {
 export interface BoardViewProps {
   board: Board;
   tasks: Task[];
-  accentColor?: string;
   onTaskClick?: (task: Task) => void;
   onAddTask?: (columnKey: string) => void;
   onRefresh?: () => void;
@@ -28,15 +27,11 @@ export interface BoardViewProps {
 export default function BoardView({
   board,
   tasks,
-  accentColor,
   onTaskClick,
   onAddTask,
   onRefresh,
 }: BoardViewProps) {
   const synapse = useSynapse();
-  const theme = useTheme();
-  const isDark = theme.mode === "dark";
-  const resolvedAccent = accentColor || theme.tokens["--color-text-accent"] || "#2563eb";
   // Group tasks by column key
   const tasksByColumn = new Map<string, Task[]>();
   for (const col of board.columns) {
@@ -81,8 +76,6 @@ export default function BoardView({
           key={col.key}
           column={col}
           tasks={tasksByColumn.get(col.key) ?? []}
-          isDark={isDark}
-          accentColor={resolvedAccent}
           onDrop={handleDrop}
           onTaskClick={onTaskClick}
           onAddTask={onAddTask}

@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import FilterBar, { EMPTY_FILTERS, type Filters, type ColumnDef } from "../components/FilterBar";
 import type { Synapse } from "@nimblebrain/synapse";
+import { Badge, Button, Inline } from "@nimblebrain/synapse/ui";
+import { PRIORITY_TONE, useStyleTokens, type ResolvedTokens } from "../tokens";
 
 // -- Domain types --
 
@@ -27,8 +29,6 @@ export interface TableViewProps {
   board: Board;
   callTool: Synapse["callTool"];
   onRefresh?: () => void;
-  isDark: boolean;
-  accentColor?: string;
 }
 
 // -- Helpers --
@@ -56,14 +56,6 @@ const EFFORT_ORDER: Record<string, number> = {
   trivial: 4,
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  critical: "#ef4444",
-  high: "#f97316",
-  medium: "#eab308",
-  low: "#3b82f6",
-  none: "#9ca3af",
-};
-
 const PRIORITIES = ["critical", "high", "medium", "low", "none"];
 
 function isOverdue(task: Task): boolean {
@@ -75,7 +67,7 @@ function isOverdue(task: Task): boolean {
 }
 
 function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "\u2014";
+  if (!dateStr) return "—";
   const d = new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -120,39 +112,27 @@ interface InlineCellProps {
   options: string[];
   labels?: Record<string, string>;
   onSave: (taskId: string, field: string, value: string) => void;
-  isDark: boolean;
+  t: ResolvedTokens;
 }
 
-function InlineEditCell({ task, field, options, labels, onSave, isDark }: InlineCellProps) {
+function InlineEditCell({ task, field, options, labels, onSave, t }: InlineCellProps) {
   const [editing, setEditing] = useState(false);
   const currentValue = (task[field] ?? "") as string;
 
   if (!editing) {
-    const display = (labels?.[currentValue] ?? currentValue) || "\u2014";
+    const display = (labels?.[currentValue] ?? currentValue) || "—";
     return (
       <span
         onClick={() => setEditing(true)}
         style={{
           cursor: "pointer",
-          borderBottom: `1px dashed ${isDark ? "#555" : "#bbb"}`,
+          borderBottom: `1px dashed ${t.borderStrong}`,
           paddingBottom: "1px",
         }}
         title="Click to edit"
       >
-        {field === "priority" && currentValue ? (
-          <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: PRIORITY_COLORS[currentValue] ?? "#9ca3af",
-                display: "inline-block",
-                flexShrink: 0,
-              }}
-            />
-            {display}
-          </span>
+        {field === "priority" && currentValue && currentValue !== "none" ? (
+          <Badge tone={PRIORITY_TONE[currentValue] ?? "neutral"}>{display}</Badge>
         ) : (
           display
         )}
@@ -172,10 +152,11 @@ function InlineEditCell({ task, field, options, labels, onSave, isDark }: Inline
       style={{
         padding: "0.2rem 0.3rem",
         fontSize: "0.8rem",
-        borderRadius: "4px",
-        border: `1px solid ${isDark ? "#4a4a6a" : "#aaa"}`,
-        background: isDark ? "#1a1a2e" : "#fff",
-        color: isDark ? "#e0e0e0" : "#1a1a2e",
+        borderRadius: "6px",
+        border: `1px solid ${t.border}`,
+        background: t.bgRaised,
+        color: t.fg,
+        fontFamily: t.fontFamily,
         width: "100%",
       }}
     >
@@ -197,21 +178,20 @@ interface BulkBarProps {
   onSetPriority: (priority: string) => void;
   onArchive: () => void;
   onClear: () => void;
-  isDark: boolean;
+  t: ResolvedTokens;
 }
 
-function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchive, onClear, isDark }: BulkBarProps) {
+function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchive, onClear, t }: BulkBarProps) {
   return (
-    <div
+    <Inline
       className="tb-bulk-bar"
+      gap="0.75rem"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
         padding: "0.5rem 1rem",
-        background: isDark ? "#2a2a4a" : "#e8e8f8",
-        borderBottom: `1px solid ${isDark ? "#3d3d5c" : "#d0d0e0"}`,
+        background: t.accentSoft,
+        borderBottom: `1px solid ${t.border}`,
         fontSize: "0.8rem",
+        flexWrap: "wrap",
       }}
     >
       <span style={{ fontWeight: 600 }}>{count} selected</span>
@@ -222,7 +202,7 @@ function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchiv
           if (e.target.value) onChangeColumn(e.target.value);
           e.target.value = "";
         }}
-        style={bulkSelectStyle(isDark)}
+        style={bulkSelectStyle(t)}
       >
         <option value="" disabled>
           Move to...
@@ -240,7 +220,7 @@ function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchiv
           if (e.target.value) onSetPriority(e.target.value);
           e.target.value = "";
         }}
-        style={bulkSelectStyle(isDark)}
+        style={bulkSelectStyle(t)}
       >
         <option value="" disabled>
           Set priority...
@@ -252,55 +232,34 @@ function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchiv
         ))}
       </select>
 
-      <button
-        onClick={onArchive}
-        style={{
-          padding: "0.3rem 0.7rem",
-          fontSize: "0.8rem",
-          borderRadius: "5px",
-          border: `1px solid ${isDark ? "#7f1d1d" : "#fca5a5"}`,
-          background: isDark ? "#450a0a" : "#fef2f2",
-          color: isDark ? "#fca5a5" : "#b91c1c",
-          cursor: "pointer",
-        }}
-      >
+      <Button variant="ghost" size="sm" onClick={onArchive} style={{ color: t.danger }}>
         Archive
-      </button>
+      </Button>
 
-      <button
-        onClick={onClear}
-        style={{
-          marginLeft: "auto",
-          padding: "0.3rem 0.7rem",
-          fontSize: "0.75rem",
-          background: "none",
-          border: "none",
-          color: isDark ? "#aaa" : "#666",
-          cursor: "pointer",
-          textDecoration: "underline",
-        }}
-      >
+      <Button variant="ghost" size="sm" onClick={onClear} style={{ marginLeft: "auto", color: t.fgMuted }}>
         Deselect all
-      </button>
-    </div>
+      </Button>
+    </Inline>
   );
 }
 
-function bulkSelectStyle(isDark: boolean): React.CSSProperties {
+function bulkSelectStyle(t: ResolvedTokens): React.CSSProperties {
   return {
     padding: "0.3rem 0.5rem",
     fontSize: "0.8rem",
-    borderRadius: "5px",
-    border: `1px solid ${isDark ? "#3d3d5c" : "#ccc"}`,
-    background: isDark ? "#1a1a2e" : "#fff",
-    color: isDark ? "#e0e0e0" : "#1a1a2e",
+    borderRadius: "6px",
+    border: `1px solid ${t.border}`,
+    background: t.bgRaised,
+    color: t.fg,
+    fontFamily: t.fontFamily,
     cursor: "pointer",
   };
 }
 
 // -- Main component --
 
-export default function TableView({ tasks, board, callTool, onRefresh, isDark, accentColor = "#2563eb" }: TableViewProps) {
+export default function TableView({ tasks, board, callTool, onRefresh }: TableViewProps) {
+  const t = useStyleTokens();
   const [sort, setSort] = useState<SortConfig>({ key: "priority", dir: "asc" });
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -428,8 +387,8 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "0.03em",
-    color: isDark ? "#aaa" : "#666",
-    borderBottom: `2px solid ${isDark ? "#3d3d5c" : "#d0d0e0"}`,
+    color: t.fgMuted,
+    borderBottom: `2px solid ${t.borderStrong}`,
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
@@ -439,11 +398,11 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
   const tdStyle: React.CSSProperties = {
     padding: "0.5rem 0.75rem",
     fontSize: "0.825rem",
-    borderBottom: `1px solid ${isDark ? "#2d2d44" : "#eee"}`,
+    borderBottom: `1px solid ${t.border}`,
     verticalAlign: "middle",
   };
 
-  const overdueRowBg = isDark ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.05)";
+  const overdueRowBg = t.dangerSoft;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 52px)" }}>
@@ -452,8 +411,6 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
         onChange={setFilters}
         columns={board.columns}
         assignees={assignees}
-        isDark={isDark}
-        accentColor={accentColor}
       />
 
       {selected.size > 0 && (
@@ -464,19 +421,13 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
           onSetPriority={handleBulkPriority}
           onArchive={handleBulkArchive}
           onClear={() => setSelected(new Set())}
-          isDark={isDark}
+          t={t}
         />
       )}
 
       <div className="tb-table-wrap" style={{ flex: 1, overflow: "auto", padding: "0 1rem" }}>
         {sorted.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "3rem 1rem",
-              color: isDark ? "#888" : "#999",
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "3rem 1rem", color: t.fgMuted }}>
             No tasks match the current filters.
           </div>
         ) : (
@@ -509,7 +460,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                     {col.label}
                     {sort.key === col.key && (
                       <span style={{ marginLeft: "4px", fontSize: "0.65rem" }}>
-                        {sort.dir === "asc" ? "\u25B2" : "\u25BC"}
+                        {sort.dir === "asc" ? "▲" : "▼"}
                       </span>
                     )}
                   </th>
@@ -528,9 +479,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                     }}
                     onMouseEnter={(e) => {
                       if (!overdue) {
-                        (e.currentTarget as HTMLElement).style.background = isDark
-                          ? "rgba(255,255,255,0.03)"
-                          : "rgba(0,0,0,0.02)";
+                        (e.currentTarget as HTMLElement).style.background = t.bgHover;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -556,7 +505,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                             marginLeft: "0.5rem",
                             fontSize: "0.65rem",
                             fontWeight: 600,
-                            color: "#ef4444",
+                            color: t.danger,
                             textTransform: "uppercase",
                           }}
                         >
@@ -572,7 +521,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                         field="priority"
                         options={PRIORITIES}
                         onSave={handleInlineEdit}
-                        isDark={isDark}
+                        t={t}
                       />
                     </td>
 
@@ -584,7 +533,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                         options={board.columns.map((c) => c.key)}
                         labels={columnLabels}
                         onSave={handleInlineEdit}
-                        isDark={isDark}
+                        t={t}
                       />
                     </td>
 
@@ -595,7 +544,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                         field="assignee"
                         options={["", ...assignees]}
                         onSave={handleInlineEdit}
-                        isDark={isDark}
+                        t={t}
                       />
                     </td>
 
@@ -603,7 +552,7 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
                     <td
                       style={{
                         ...tdStyle,
-                        color: overdue ? "#ef4444" : undefined,
+                        color: overdue ? t.danger : undefined,
                         fontWeight: overdue ? 600 : undefined,
                       }}
                     >
@@ -612,11 +561,11 @@ export default function TableView({ tasks, board, callTool, onRefresh, isDark, a
 
                     {/* Effort */}
                     <td className="tb-col-hide-mobile" style={tdStyle}>
-                      {task.effort ? task.effort.charAt(0).toUpperCase() + task.effort.slice(1) : "\u2014"}
+                      {task.effort ? task.effort.charAt(0).toUpperCase() + task.effort.slice(1) : "—"}
                     </td>
 
                     {/* Created */}
-                    <td className="tb-col-hide-mobile" style={{ ...tdStyle, color: isDark ? "#888" : "#999", fontSize: "0.775rem" }}>
+                    <td className="tb-col-hide-mobile" style={{ ...tdStyle, color: t.fgFaint, fontSize: "0.775rem" }}>
                       {formatDate(task.created_at)}
                     </td>
                   </tr>
