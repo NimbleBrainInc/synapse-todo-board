@@ -1027,9 +1027,11 @@ wheels = [
 
 [[package]]
 name = "synapse-todo-board"
-version = "0.2.1"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
+    { name = "jsonschema" },
+    { name = "python-ulid" },
     { name = "upjack", extra = ["mcp"] },
 ]
 
@@ -1040,7 +1042,11 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "upjack", extras = ["mcp"], specifier = ">=0.5.1" }]
+requires-dist = [
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "python-ulid", specifier = ">=3.1.0" },
+    { name = "upjack", extras = ["mcp"], specifier = ">=0.5.1" },
+]
 
 [package.metadata.requires-dev]
 dev = [
