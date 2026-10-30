@@ -79,3 +79,7 @@ def test_settings_panel_resource_is_published(mcp) -> None:
     assert "<title>Todo Board Settings</title>" in body
     assert "set_custom_instructions" in body
     assert "app://instructions" in body
+    # The cap error comes back as a payload, not a thrown error, so the save
+    # handler must branch on it or the panel shows "Saved" for a rejected body.
+    assert "structuredContent" in body, "save handler must read structuredContent"
+    assert 'status === "error"' in body, "save handler must branch on the error status"
