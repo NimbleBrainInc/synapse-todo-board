@@ -56,5 +56,15 @@
       "description": "Board name (denormalized for quick access)"
     }
   },
-  "required": ["title", "column"]
+  "required": ["title", "column"],
+  "examples": [
+    { "title": "Draft the launch announcement", "column": "backlog" },
+    {
+      "title": "Review the pricing page copy",
+      "column": "in_progress",
+      "priority": "high",
+      "due_date": "2026-06-30",
+      "assignee": "alice"
+    }
+  ]
 }

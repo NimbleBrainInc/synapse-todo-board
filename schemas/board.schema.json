@@ -51,5 +51,16 @@
       "description": "Key of the column where new tasks are placed by default"
     }
   },
-  "required": ["name", "columns"]
+  "required": ["name", "columns"],
+  "examples": [
+    {
+      "name": "Q2 Roadmap",
+      "columns": [
+        { "key": "backlog", "label": "Backlog" },
+        { "key": "in_progress", "label": "In Progress" },
+        { "key": "done", "label": "Done" }
+      ],
+      "default_column": "backlog"
+    }
+  ]
 }
