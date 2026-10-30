@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useTheme, useSynapse, useVisibleState } from "@nimblebrain/synapse/react";
-import { Button, EmptyState, Inline, SegmentedControl, Spinner, Stack } from "@nimblebrain/synapse/ui";
+import { useApp, useModelContext } from "@nimblebrain/synapse/react";
+import { AppFrame, Button, EmptyState, Inline, SegmentedControl, Spinner, Stack } from "@nimblebrain/synapse/ui";
 import { useBoards } from "./hooks/useBoards";
 import { useTasks } from "./hooks/useTasks";
 import type { Task } from "./hooks/useTasks";
@@ -505,9 +505,8 @@ function CreateTaskDialog({
 // ---------------------------------------------------------------------------
 
 export default function App() {
-  const theme = useTheme();
   const t = useStyleTokens();
-  const synapse = useSynapse();
+  const app = useApp();
   const { boards, loading: boardsLoading, refresh: refreshBoards } = useBoards();
 
   const [activeView, setActiveView] = useState<ViewMode>("board");
@@ -522,11 +521,6 @@ export default function App() {
   // Derive the current board object from the boards list
   const selectedBoard = boards.find((b) => b.id === selectedBoardId) ?? null;
 
-  // Apply theme mode to document (lets the host's light/dark CSS vars scope)
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme.mode);
-  }, [theme.mode]);
-
   // Inject responsive CSS on first render
   useEffect(() => { injectStyles(); }, []);
 
@@ -538,7 +532,7 @@ export default function App() {
   }, [selectedBoardId, boards]);
 
   // Push current UI state to the agent so it knows what the user is looking at
-  const pushState = useVisibleState();
+  const pushState = useModelContext();
   useEffect(() => {
     const tasksByColumn: Record<string, number> = {};
     for (const tk of tasks) {
@@ -573,7 +567,7 @@ export default function App() {
 
   const handleCreateBoard = useCallback(
     async (name: string, description: string, columns: BoardColumn[]) => {
-      const result = await synapse.callTool("create_board", {
+      const result = await app.callTool("create_board", {
         name,
         description: description || undefined,
         columns: columns.map((c) => ({ key: c.key, label: c.label })),
@@ -588,7 +582,7 @@ export default function App() {
         setSelectedBoardId(data.id);
       }
     },
-    [synapse, refreshBoards],
+    [app, refreshBoards],
   );
 
   // -- Create task --
@@ -621,13 +615,13 @@ export default function App() {
       if (data.due_date) args.due_date = data.due_date;
       if (data.effort) args.effort = data.effort;
 
-      const result = await synapse.callTool("create_board_task", args);
+      const result = await app.callTool("create_board_task", args);
       if (result.isError) {
         throw new Error(String(result.data));
       }
       await refreshTasks();
     },
-    [synapse, selectedBoardId, refreshTasks],
+    [app, selectedBoardId, refreshTasks],
   );
 
   // -- Task click (open detail) --
@@ -651,27 +645,27 @@ export default function App() {
     const board = boards.find((b) => b.id === selectedBoardId);
     if (!confirm(`Delete board "${board?.name}"? All tasks on this board will be orphaned.`)) return;
     try {
-      await synapse.callTool("delete_board", { board_id: selectedBoardId });
+      await app.callTool("delete_board", { board_id: selectedBoardId });
       setSelectedBoardId(null);
       await refreshBoards();
     } catch (err) {
       console.error("Failed to delete board:", err);
     }
-  }, [synapse, selectedBoardId, boards, refreshBoards]);
+  }, [app, selectedBoardId, boards, refreshBoards]);
 
   // -- Render --
 
   return (
-    <div
+    <AppFrame
+      contentWidth="full"
       style={{
         fontFamily: t.fontFamily,
-        minHeight: "100vh",
         background: t.bg,
         color: t.fg,
       }}
     >
       {/* ---- Header ---- */}
-      <header
+      <AppFrame.Header
         className="tb-header"
         style={{
           display: "flex",
@@ -712,10 +706,10 @@ export default function App() {
             onChange={setActiveView}
           />
         </div>
-      </header>
+      </AppFrame.Header>
 
       {/* ---- Main content ---- */}
-      <main>
+      <AppFrame.Body bleed>
         {boardsLoading && boards.length === 0 ? (
           <EmptyState icon={<Spinner />} description="Loading boards" style={{ padding: "6rem 2rem" }} />
         ) : boards.length === 0 ? (
@@ -746,11 +740,11 @@ export default function App() {
           <TableView
             tasks={tasks}
             board={selectedBoard}
-            callTool={synapse.callTool.bind(synapse)}
+            callTool={app.callTool.bind(app)}
             onRefresh={refreshTasks}
           />
         )}
-      </main>
+      </AppFrame.Body>
 
       {/* ---- Modals / Overlays ---- */}
 
@@ -778,6 +772,6 @@ export default function App() {
           onSaved={refreshTasks}
         />
       )}
-    </div>
+    </AppFrame>
   );
 }

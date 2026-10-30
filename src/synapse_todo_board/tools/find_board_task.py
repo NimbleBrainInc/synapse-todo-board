@@ -2,18 +2,18 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def find_board_task(
-    app: UpjackApp,
+    app: BoardStore,
     board_id: str,
     query: str,
 ) -> dict[str, Any]:
     """Search for tasks on a specific board matching a query.
 
     Args:
-        app: UpjackApp instance.
+        app: BoardStore instance.
         board_id: Board to scope the search to.
         query: Case-insensitive substring to match against task titles.
 
@@ -41,8 +41,7 @@ def find_board_task(
             "due_date": t.get("due_date"),
         }
         for t in board_tasks
-        if t.get("status", "active") == "active"
-        and q in t.get("title", "").lower()
+        if t.get("status", "active") == "active" and q in t.get("title", "").lower()
     ]
 
     return {

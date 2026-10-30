@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import FilterBar, { EMPTY_FILTERS, type Filters, type ColumnDef } from "../components/FilterBar";
-import type { Synapse } from "@nimblebrain/synapse";
+import type { App } from "@nimblebrain/synapse";
 import { Badge, Button, Inline } from "@nimblebrain/synapse/ui";
 import { PRIORITY_TONE, useStyleTokens, type ResolvedTokens } from "../tokens";
 
@@ -27,7 +27,7 @@ export interface Board {
 export interface TableViewProps {
   tasks: Task[];
   board: Board;
-  callTool: Synapse["callTool"];
+  callTool: App["callTool"];
   onRefresh?: () => void;
 }
 
@@ -405,7 +405,7 @@ export default function TableView({ tasks, board, callTool, onRefresh }: TableVi
   const overdueRowBg = t.dangerSoft;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 52px)" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <FilterBar
         filters={filters}
         onChange={setFilters}

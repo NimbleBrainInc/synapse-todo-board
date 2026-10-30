@@ -3,7 +3,7 @@
   "title": "Board",
   "description": "A kanban-style board that organizes tasks into columns",
   "allOf": [
-    { "$ref": "https://upjack.dev/schemas/v1/upjack-entity.schema.json" }
+    { "$ref": "entity.schema.json" }
   ],
   "properties": {
     "name": {

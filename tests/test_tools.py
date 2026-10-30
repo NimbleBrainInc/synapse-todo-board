@@ -158,11 +158,11 @@ class TestBatchArchive:
             _call_tool(
                 mcp,
                 "batch_archive",
-                {"board_id": "bd_does_not_exist", "older_than_days": 7},
+                {"board_id": "bd_00000000000000000000000000", "older_than_days": 7},
             )
         )
         assert "error" in result
-        assert "bd_does_not_exist" in result["error"]
+        assert "bd_00000000000000000000000000" in result["error"]
 
 
 # ---------------------------------------------------------------------------
@@ -193,11 +193,11 @@ class TestArchiveTask:
         _run(_call_tool(mcp, "archive_task", {"task_id": task["id"]}))
 
         listing = _run(_call_tool(mcp, "list_tasks"))
-        remaining = {t["id"] for t in listing.get("tasks", [])}
+        remaining = {t["id"] for t in listing.get("entities", [])}
         assert task["id"] not in remaining
 
     def test_missing_task_returns_error(self, mcp):
-        result = _run(_call_tool(mcp, "archive_task", {"task_id": "tk_DOESNOTEXIST"}))
+        result = _run(_call_tool(mcp, "archive_task", {"task_id": "tk_00000000000000000000000000"}))
         assert "error" in result
 
 
@@ -299,7 +299,6 @@ class TestCreateBoardTask:
         )
 
         assert first_in_progress["position"] == 0
-
 
 
 # ---------------------------------------------------------------------------

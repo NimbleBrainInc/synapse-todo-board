@@ -8,7 +8,7 @@ dev:
 build: build-ui
 
 build-ui:
-	cd ui && npm install && npm run build
+	cd ui && npm ci --ignore-scripts && npm run build
 
 # Run server in stdio mode
 run:

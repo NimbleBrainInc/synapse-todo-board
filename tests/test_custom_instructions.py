@@ -73,9 +73,31 @@ def test_eight_kib_exact_is_accepted(mcp) -> None:
     assert _run(_read_resource(mcp, "app://instructions")) == body
 
 
-def test_settings_panel_resource_is_published(mcp) -> None:
+def _built_ui_fixture(tmp_path, monkeypatch):
+    import synapse_todo_board.server as server_module
+
+    path = tmp_path / "index.html"
+    path.write_text(
+        "<html><head><title>Todo Board</title></head><body><script>/* built UI */</script></body></html>"
+    )
+    monkeypatch.setattr(server_module, "_UI_HTML", path)
+
+
+def test_settings_panel_resource_is_published(mcp, tmp_path, monkeypatch) -> None:
     """`/settings/apps/synapse-todo-board` reads `ui://todo-board/settings`."""
+    _built_ui_fixture(tmp_path, monkeypatch)
     body = _run(_read_resource(mcp, "ui://todo-board/settings"))
     assert "<title>Todo Board Settings</title>" in body
-    assert "set_custom_instructions" in body
-    assert "app://instructions" in body
+    assert '<meta name="todo-board-view" content="settings">' in body
+
+
+def test_ui_resources_do_not_inline_workspace_instructions(mcp, tmp_path, monkeypatch) -> None:
+    """UI resources select a static view; private content is read after handshake."""
+    _built_ui_fixture(tmp_path, monkeypatch)
+    value = "Workspace-only guidance with a distinct test marker"
+    _run(_call_tool(mcp, "set_custom_instructions", {"text": value}))
+    main = _run(_read_resource(mcp, "ui://todo-board/main"))
+    settings = _run(_read_resource(mcp, "ui://todo-board/settings"))
+    assert value not in main and value not in settings
+    assert '<meta name="todo-board-view" content="settings">' not in main
+    assert _run(_read_resource(mcp, "app://instructions")) == value

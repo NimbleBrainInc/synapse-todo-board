@@ -3,7 +3,7 @@
   "title": "Task",
   "description": "A task or work item that belongs to a board column",
   "allOf": [
-    { "$ref": "https://upjack.dev/schemas/v1/upjack-entity.schema.json" }
+    { "$ref": "entity.schema.json" }
   ],
   "properties": {
     "title": {

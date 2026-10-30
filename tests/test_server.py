@@ -4,9 +4,8 @@ Phase 1 of the synapse-tests initiative — prevents the class of drift that
 went undetected during the upjack 0.4.4 → 0.5.1 upgrade (the `{data: {...}}`
 contract flatten). These tests verify:
 
-1. Server instantiates cleanly from the manifest.
-2. The auto-generated CRUD tools declared in the manifest's per-entity
-   `tools` allowlist are registered and listed.
+1. Server instantiates without Upjack.
+2. The published CRUD surface remains available after migration.
 3. All hand-written domain tools are registered.
 4. Flat kwargs are the accepted create shape.
 5. The legacy `{data: {...}}` wrapper is rejected via JSON Schema validation.
@@ -23,55 +22,54 @@ from fastmcp.exceptions import ToolError
 from tests.conftest import _call_tool, _list_tool_names, _run
 
 
+def test_tool_schemas_have_explicit_object_roots_for_strict_hosts(mcp):
+    from fastmcp import Client
+
+    async def check():
+        async with Client(mcp) as client:
+            tools = await client.list_tools()
+            for tool in tools:
+                assert tool.inputSchema.get("type") == "object", tool.name
+                if tool.outputSchema is not None:
+                    assert tool.outputSchema.get("type") == "object", tool.name
+
+    _run(check())
+
+
 # ---------------------------------------------------------------------------
-# Manifest-driven expectations
+# Published tool contract, captured before the runtime migration.
 # ---------------------------------------------------------------------------
 
-# Tool category → naming pattern. `{name}` = entity singular, `{plural}` = plural.
-_CATEGORY_TEMPLATES: dict[str, str] = {
-    "create": "create_{name}",
-    "get": "get_{name}",
-    "update": "update_{name}",
-    "list": "list_{plural}",
-    "search": "search_{plural}",
-    "delete": "delete_{name}",
+EXPECTED_TOOLS = {
+    "create_board",
+    "get_board",
+    "update_board",
+    "list_boards",
+    "search_boards",
+    "delete_board",
+    "get_task",
+    "update_task",
+    "list_tasks",
+    "search_tasks",
+    "delete_task",
+    "seed_data",
+    "add_field",
+    "query_boards_by_relationship",
+    "get_related_board",
+    "get_board_composite",
+    "query_tasks_by_relationship",
+    "get_related_task",
+    "get_task_composite",
+    "rebuild_index",
+    "create_board_task",
+    "find_board_task",
+    "move_task",
+    "reorder_column",
+    "board_summary",
+    "batch_archive",
+    "archive_task",
+    "set_custom_instructions",
 }
-
-# The 6 "CRUD" categories the spec cares about for
-# `test_expected_auto_crud_tools_registered`. Graph traversal categories
-# (`query_by_relationship`, `get_related`, `get_composite`) are intentionally
-# excluded — they're covered by upjack's own tests.
-_CRUD_CATEGORIES: tuple[str, ...] = ("create", "get", "update", "list", "search", "delete")
-
-
-def _expected_crud_tools(entities: list[dict]) -> set[str]:
-    """Build the set of CRUD tools expected to be listed given the manifest.
-
-    Respects per-entity `tools` allowlists: if `tools` is set, only the
-    listed categories show up in tools/list. If `tools` is omitted, all
-    CRUD categories are listed.
-    """
-    expected: set[str] = set()
-    for ent in entities:
-        name = ent["name"]
-        plural = ent["plural"]
-        allowlist = ent.get("tools")
-        if allowlist is None:
-            categories = _CRUD_CATEGORIES
-        else:
-            categories = tuple(c for c in _CRUD_CATEGORIES if c in allowlist)
-        for cat in categories:
-            expected.add(_CATEGORY_TEMPLATES[cat].format(name=name, plural=plural))
-    return expected
-
-
-def _manifest_entities() -> list[dict]:
-    """Read the todo-board manifest and return its entity definitions."""
-    import synapse_todo_board.server as server_module
-
-    manifest_path = server_module._PROJECT_ROOT / "manifest.json"
-    manifest = json.loads(manifest_path.read_text())
-    return manifest["_meta"]["ai.nimblebrain/upjack"]["entities"]
 
 
 # ---------------------------------------------------------------------------
@@ -80,29 +78,16 @@ def _manifest_entities() -> list[dict]:
 
 
 def test_server_instantiates(mcp):
-    """`create_server(manifest, root=tmp_path)` produces a FastMCP instance."""
+    """The app owns a FastMCP instance bound to the isolated workspace."""
     assert isinstance(mcp, FastMCP)
 
 
-def test_expected_auto_crud_tools_registered(mcp):
-    """Every entity's manifest-declared CRUD tools are present in tools/list.
+def test_published_tool_surface_is_preserved(mcp):
+    """Migration keeps all tools, including relationship queries and helpers.
 
-    The `task` entity declares a `tools` allowlist that excludes `create`, so
-    `create_task` must NOT appear — that's precisely the point of the
-    allowlist. Board has no allowlist so all 6 CRUD tools are expected.
+    Task creation stays board-scoped; a raw create_task would orphan tasks.
     """
-    entities = _manifest_entities()
-    expected = _expected_crud_tools(entities)
-    listed = _run(_list_tool_names(mcp))
-    missing = expected - listed
-    assert not missing, f"Missing expected CRUD tools: {sorted(missing)}"
-
-    # Task's allowlist excludes `create` — `create_task` must be hidden.
-    task_ent = next(e for e in entities if e["name"] == "task")
-    if task_ent.get("tools") is not None and "create" not in task_ent["tools"]:
-        assert "create_task" not in listed, (
-            "create_task should be hidden when the task entity's `tools` allowlist excludes it"
-        )
+    assert _run(_list_tool_names(mcp)) == EXPECTED_TOOLS
 
 
 def test_hand_written_tools_registered(mcp):
@@ -243,7 +228,7 @@ def test_delete_board_by_board_id_succeeds(mcp):
     # Default `list_boards` filters to status=active; soft-deleted boards
     # should no longer appear.
     listing = _run(_call_tool(mcp, "list_boards"))
-    remaining = {b["id"] for b in listing.get("boards", [])}
+    remaining = {b["id"] for b in listing.get("entities", [])}
     assert board["id"] not in remaining
 
 

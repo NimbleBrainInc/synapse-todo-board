@@ -19,7 +19,7 @@ def register_tools(mcp, app):
 
     Args:
         mcp: FastMCP server instance.
-        app: UpjackApp instance for entity access.
+        app: BoardStore instance for entity access.
     """
 
     @mcp.tool(
@@ -132,7 +132,7 @@ def register_tools(mcp, app):
             "Archive a single task by flipping its status to 'archived'. "
             "Archived tasks are filtered out of the active board view. "
             "Use this instead of update_task when the intent is to archive — "
-            "update_task cannot write status (it's an Upjack base-entity field)."
+            "update_task cannot write status (it's a base record field)."
         ),
     )
     def _archive_task(task_id: str) -> dict:

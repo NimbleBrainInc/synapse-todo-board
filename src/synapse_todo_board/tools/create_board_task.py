@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def create_board_task(
-    app: UpjackApp,
+    app: BoardStore,
     board_id: str,
     data: dict[str, Any],
 ) -> dict[str, Any]:
@@ -17,7 +17,7 @@ def create_board_task(
     appear in creation order without a follow-up ``reorder_column`` call.
 
     Args:
-        app: UpjackApp instance.
+        app: BoardStore instance.
         board_id: Board to create the task on.
         data: Task fields (title, column, priority, etc.). ``column`` is
             optional and defaults to the board's ``default_column`` or first
@@ -28,6 +28,11 @@ def create_board_task(
         The created task entity, or an error dict if the board is missing
         or the requested column isn't defined on the board.
     """
+    with app.lock:
+        return _create_board_task(app, board_id, data)
+
+
+def _create_board_task(app: BoardStore, board_id: str, data: dict[str, Any]) -> dict[str, Any]:
     # Validate board exists
     try:
         board = app.get_entity("board", board_id)

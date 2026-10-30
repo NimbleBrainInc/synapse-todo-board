@@ -1,14 +1,14 @@
-"""Todo Board MCP server built with Upjack + FastMCP.
-
-Tier 2: Auto-generated entity CRUD from manifest (boards, tasks, labels).
-Tier 3: Custom domain tools for task workflow (move, reorder, archive, summary).
-"""
+"""Todo Board MCP server with FastMCP tools and an app-owned JSON store."""
 
 import os
-from pathlib import Path
+import logging
 
-from upjack.app import UpjackApp
-from upjack.server import create_server
+from fastmcp import FastMCP
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+
+from synapse_todo_board.assets import asset_root
+from synapse_todo_board.crud import register_store_tools
+from synapse_todo_board.store import BoardStore, ChangeMarker, current_change, mark_changed
 
 from synapse_todo_board.instructions import (
     read_custom_instructions,
@@ -16,10 +16,47 @@ from synapse_todo_board.instructions import (
 )
 from synapse_todo_board.tools import register_tools
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-manifest_path = _PROJECT_ROOT / "manifest.json"
-workspace_root = os.environ.get("MPAK_WORKSPACE", "./workspace")
-mcp = create_server(manifest_path, root=workspace_root)
+_PROJECT_ROOT = asset_root()
+workspace_root = os.environ.get("MPAK_WORKSPACE", os.environ.get("UPJACK_ROOT", "./workspace"))
+_app = BoardStore(workspace_root, _PROJECT_ROOT)
+mcp = FastMCP(
+    "Todo Board",
+    instructions="Boards and tasks stored locally. Read skill://todo-board/usage for guidance.",
+)
+
+
+class BoardWriteNotifications(Middleware):
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        marker = ChangeMarker()
+        token = current_change.set(marker)
+        try:
+            return await call_next(context)
+        finally:
+            current_change.reset(token)
+            if marker.changed and context.fastmcp_context is not None:
+                try:
+                    await context.fastmcp_context.session.send_resource_list_changed()
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "Board change notification could not be sent", exc_info=True
+                    )
+
+
+mcp.add_middleware(BoardWriteNotifications())
+register_store_tools(mcp, _app)
+
+
+@mcp.resource("upjack://context")
+def todo_board_context() -> str:
+    """Domain guidance; the resource URI is kept for existing clients."""
+    return (_PROJECT_ROOT / "context.md").read_text()
+
+
+@mcp.resource("upjack://skills/task-triage")
+def todo_board_triage() -> str:
+    """Task triage guidance; the resource URI is kept for existing clients."""
+    return (_PROJECT_ROOT / "skills/task-triage/SKILL.md").read_text()
+
 
 # Skill resource — teaches the LLM how to use this server's tools
 _SKILL_PATH = _PROJECT_ROOT / "SKILL.md"
@@ -37,14 +74,11 @@ mcp._mcp_server.instructions = (
     (mcp.instructions or "")
     + "\n\nCRITICAL — Board Context: The UI visible state contains the active board "
     "(selectedBoard.id). Use it for ALL task operations:\n"
-    "- Creating tasks: use create_board_task(board_id=<selectedBoard.id>, data={...}) — "
+    "- Creating tasks: use create_board_task(board_id=<selectedBoard.id>, title=..., ...) — "
     "NEVER use create_task directly, it won't link to the board and the task will be invisible.\n"
     "- Finding tasks: use find_board_task(board_id=<selectedBoard.id>, query=...)\n"
     "- NEVER call search_tasks or list_boards — the board context is already in the visible state."
 )
-
-# Load app instance for custom tools
-_app = UpjackApp.from_manifest(manifest_path, root=workspace_root)
 
 # Register custom domain tools
 register_tools(mcp, _app)
@@ -53,7 +87,7 @@ register_tools(mcp, _app)
 _UI_HTML = _PROJECT_ROOT / "ui" / "dist" / "index.html"
 
 
-@mcp.resource("ui://todo-board/main")
+@mcp.resource("ui://todo-board/main", mime_type="text/html;profile=mcp-app")
 def todo_board_ui() -> str:
     """The Todo Board app UI — rendered in the platform sidebar."""
     if _UI_HTML.exists():
@@ -89,7 +123,11 @@ async def set_custom_instructions(text: str) -> dict[str, str]:
     convention without you having to repeat it.
     """
     try:
-        return write_custom_instructions(workspace_root, text)
+        before = read_custom_instructions(workspace_root)
+        result = write_custom_instructions(workspace_root, text)
+        if before != text:
+            mark_changed()
+        return result
     except ValueError as err:
         # 8 KiB cap → return a structured tool error rather than letting the
         # exception cross the wire as a transport-level failure. The agent
@@ -97,170 +135,18 @@ async def set_custom_instructions(text: str) -> dict[str, str]:
         return {"status": "error", "error": str(err)}
 
 
-_SETTINGS_HTML = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Todo Board Settings</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, -apple-system, sans-serif; padding: 0; color: #1a1a1a; background: transparent; font-size: 14px; line-height: 1.5; }
-  h2 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-  p.lede { font-size: 13px; color: #555; margin-bottom: 12px; }
-  .section { padding: 16px; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; }
-  textarea { width: 100%; min-height: 180px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; line-height: 1.5; resize: vertical; }
-  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-  .count { font-size: 12px; color: #777; margin-left: auto; }
-  .count.over { color: #b91c1c; font-weight: 500; }
-  button { padding: 8px 14px; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; background: #2563eb; color: #fff; }
-  button:hover { background: #1d4ed8; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-secondary { background: #f3f4f6; color: #374151; }
-  .btn-secondary:hover { background: #e5e7eb; }
-  .status { font-size: 12px; padding: 6px 10px; border-radius: 4px; }
-  .status.ok { background: #f0fdf4; color: #166534; }
-  .status.err { background: #fef2f2; color: #991b1b; }
-  .loading { color: #999; font-style: italic; padding: 16px; }
-</style>
-</head>
-<body>
-<div id="root" class="loading">Loading…</div>
-<script>
-(function() {
-  const MAX = 8 * 1024;
-  let _reqId = 0;
-  const _pending = {};
-
-  function callTool(name, args) {
-    return new Promise((resolve, reject) => {
-      const id = ++_reqId;
-      _pending[id] = { resolve, reject };
-      window.parent.postMessage(
-        { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args || {} } },
-        "*",
-      );
-    });
-  }
-  function readResource(uri) {
-    return new Promise((resolve, reject) => {
-      const id = ++_reqId;
-      _pending[id] = { resolve, reject };
-      window.parent.postMessage(
-        { jsonrpc: "2.0", id, method: "resources/read", params: { uri } },
-        "*",
-      );
-    });
-  }
-  window.addEventListener("message", (e) => {
-    const msg = e.data;
-    if (!msg || !msg.jsonrpc) return;
-    if (msg.id && _pending[msg.id]) {
-      const { resolve, reject } = _pending[msg.id];
-      delete _pending[msg.id];
-      if (msg.error) reject(new Error(msg.error.message || "request failed"));
-      else resolve(msg.result);
-    }
-  });
-
-  // Character count for the UI; the backend enforces an 8 KiB UTF-8 byte
-  // cap. For ASCII Markdown the two are equal; for emoji-heavy text the
-  // server-side check may reject before the UI count reaches the limit and
-  // the error surfaces in the status row.
-
-  let lastSaved = "";
-
-  async function init() {
-    const root = document.getElementById("root");
-    try {
-      const result = await readResource("app://instructions");
-      const body = (result && result.contents && result.contents[0] && result.contents[0].text) || "";
-      lastSaved = body;
-      root.classList.remove("loading");
-      root.innerHTML = `
-        <div class="section">
-          <h2>Custom Instructions</h2>
-          <p class="lede">
-            Saved guidance the agent picks up on every turn — workflow conventions,
-            triage rules, default priorities, anything you'd otherwise repeat in
-            chat. Empty clears.
-          </p>
-          <textarea id="ta" placeholder="e.g. Default new tasks to 'medium' priority. Triage on Mondays only.">${
-            body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-          }</textarea>
-          <div class="row">
-            <button id="save">Save</button>
-            <button id="reset" class="btn-secondary">Reset</button>
-            <span id="count" class="count">0 / ${MAX.toLocaleString()} characters</span>
-          </div>
-          <div class="row">
-            <span id="status"></span>
-          </div>
-        </div>
-      `;
-      const ta = document.getElementById("ta");
-      const count = document.getElementById("count");
-      const status = document.getElementById("status");
-      const saveBtn = document.getElementById("save");
-      const resetBtn = document.getElementById("reset");
-
-      function refreshCount() {
-        const chars = ta.value.length;
-        count.textContent = `${chars.toLocaleString()} / ${MAX.toLocaleString()} characters`;
-        count.classList.toggle("over", chars > MAX);
-        saveBtn.disabled = chars > MAX || ta.value === lastSaved;
-        resetBtn.disabled = ta.value === lastSaved;
-      }
-      ta.addEventListener("input", refreshCount);
-      refreshCount();
-
-      saveBtn.addEventListener("click", async () => {
-        status.className = "status";
-        status.textContent = "Saving…";
-        saveBtn.disabled = true;
-        try {
-          await callTool("set_custom_instructions", { text: ta.value });
-          lastSaved = ta.value;
-          status.className = "status ok";
-          status.textContent = "Saved";
-          refreshCount();
-          setTimeout(() => { status.textContent = ""; status.className = "status"; }, 1500);
-        } catch (err) {
-          status.className = "status err";
-          status.textContent = String(err.message || err);
-          refreshCount();
-        }
-      });
-      resetBtn.addEventListener("click", () => {
-        ta.value = lastSaved;
-        refreshCount();
-        status.textContent = "";
-        status.className = "status";
-      });
-    } catch (err) {
-      root.classList.remove("loading");
-      root.innerHTML = `<div class="section"><h2>Custom Instructions</h2>
-        <p class="lede" style="color:#b91c1c">Failed to load: ${String(err.message || err)}</p></div>`;
-    }
-  }
-  init();
-})();
-</script>
-</body>
-</html>
-"""
-
-
-@mcp.resource("ui://todo-board/settings")
+@mcp.resource("ui://todo-board/settings", mime_type="text/html;profile=mcp-app")
 def todo_board_settings_ui() -> str:
-    """Custom-instructions editor — rendered at /settings/apps/synapse-todo-board.
-
-    Inline HTML for now (no separate ui/settings.html build). Communicates
-    with the bundle via the platform's iframe postMessage bridge — same
-    pattern Collateral's inline settings page uses.
-    """
-    return _SETTINGS_HTML
+    """The settings view uses the same built Synapse app and own-server bridge."""
+    if not _UI_HTML.exists():
+        return todo_board_ui()
+    document = _UI_HTML.read_text()
+    if "<head>" not in document:
+        raise ValueError("Rebuild the Todo Board UI before opening settings")
+    marker = '<meta name="todo-board-view" content="settings">'
+    return document.replace("<head>", "<head>" + marker, 1).replace(
+        "<title>Todo Board</title>", "<title>Todo Board Settings</title>", 1
+    )
 
 
 # ASGI entrypoint (uvicorn / nimbletools-core)

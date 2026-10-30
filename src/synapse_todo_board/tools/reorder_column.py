@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def reorder_column(
-    app: UpjackApp,
+    app: BoardStore,
     board_id: str,
     column_key: str,
     task_ids: list[str],
@@ -14,7 +14,7 @@ def reorder_column(
     """Batch-update positions of all tasks within a column.
 
     Args:
-        app: UpjackApp instance.
+        app: BoardStore instance.
         board_id: ID of the board.
         column_key: Column to reorder.
         task_ids: Task IDs in desired order (index = new position).
@@ -23,6 +23,13 @@ def reorder_column(
         Context dict with column, board_id, reordered count, and ordered
         task list. Returns {"error": "..."} on failure.
     """
+    with app.lock:
+        return _reorder_column(app, board_id, column_key, task_ids)
+
+
+def _reorder_column(
+    app: BoardStore, board_id: str, column_key: str, task_ids: list[str]
+) -> dict[str, Any]:
     # 1. Load board and validate column
     try:
         board = app.get_entity("board", board_id)
@@ -34,7 +41,8 @@ def reorder_column(
     if column_key not in column_keys:
         return {"error": f"Column '{column_key}' does not exist on board {board_id}"}
 
-    # 2. Validate each task belongs to this column, then update position
+    # Validate the whole request before writing any position.
+    validated = []
     order: list[dict[str, Any]] = []
     for idx, tid in enumerate(task_ids):
         try:
@@ -53,12 +61,17 @@ def reorder_column(
         if not belongs:
             return {"error": f"Task {tid} does not belong to board {board_id}"}
 
+        validated.append((tid, task))
+
+    for idx, (tid, task) in enumerate(validated):
         app.update_entity("task", tid, {"position": idx})
-        order.append({
-            "id": tid,
-            "title": task.get("title"),
-            "position": idx,
-        })
+        order.append(
+            {
+                "id": tid,
+                "title": task.get("title"),
+                "position": idx,
+            }
+        )
 
     return {
         "column": column_key,

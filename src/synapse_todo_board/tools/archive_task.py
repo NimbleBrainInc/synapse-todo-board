@@ -2,10 +2,10 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
-def archive_task(app: UpjackApp, task_id: str) -> dict[str, Any]:
+def archive_task(app: BoardStore, task_id: str) -> dict[str, Any]:
     """Flip a task's status to 'archived' so it's filtered out of active views.
 
     The task schema's `status` lives on the Upjack base entity (not the
@@ -15,7 +15,7 @@ def archive_task(app: UpjackApp, task_id: str) -> dict[str, Any]:
     same path `batch_archive` uses.
 
     Args:
-        app: UpjackApp instance.
+        app: BoardStore instance.
         task_id: Task to archive.
 
     Returns:

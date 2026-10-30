@@ -18,15 +18,16 @@ When the user asks to find, move, update, or reference a task by name:
 - **Tasks** belong to **Boards** via the `belongs_to` relationship
 - Every task lives on exactly one board
 - A board can have many tasks
-- **When creating a task, you MUST include** `relationships: [{ rel: "belongs_to", target: "<board_id>" }]` in the data. Without this, the task is orphaned and invisible in the UI. Use `selectedBoard.id` from the visible state as the target.
+- Create tasks with `create_board_task(board_id=<selectedBoard.id>, title="...")`. It adds the
+  `belongs_to` relationship. A raw `create_task` tool is not exposed.
 
 ## Querying by Relationship
 
 Use relationship tools instead of listing and filtering manually:
 
 - **Find all tasks on a board**: `query_tasks_by_relationship(rel="belongs_to", target_id="<board_id>")` — uses the reverse index, supports `filter` and `limit`
-- **Load a task with its board**: `get_task_composite(entity_id="<task_id>")` — returns the task plus related entities in one call
-- **Follow one relationship**: `get_related_task(entity_id="<task_id>", rel="belongs_to")` — resolves the linked board directly
+- **Load a task with its board**: `get_task_composite(task_id="<task_id>")` — returns the task plus related entities in one call
+- **Follow one relationship**: `get_related_task(task_id="<task_id>", rel="belongs_to")` — resolves the linked board directly
 
 Prefer `query_tasks_by_relationship` over `list_tasks` + client-side filtering.
 
@@ -86,7 +87,10 @@ WIP limits are guardrails, not hard walls. Respecting them keeps work flowing; i
 
 ## Custom Tools
 
-Standard CRUD tools (create, get, update, list, search, delete) are available for both boards and tasks. These domain-specific tools handle operations that need multi-entity reads or business logic:
+Boards expose create/get/update/list/search/delete tools. Tasks expose get/update/list/search/delete;
+creation uses the board-scoped tool below. List and query results use an `entities` envelope;
+pass `limit: null` when the complete collection is needed. These domain-specific tools handle
+operations that need multi-entity reads or business logic:
 
 ### `create_board_task`
 Create a task on a specific board. **ALWAYS use this instead of `create_task`** — it auto-links the task to the board via the `belongs_to` relationship so it appears in the UI. Pass the board ID from visible state (`selectedBoard.id`) and the task data (title, column, priority, etc.). The column defaults to the board's default if not specified.
@@ -115,3 +119,13 @@ Archive all completed tasks on a board older than N days (default: 7). Use to ke
 - Respect WIP limits — warn, don't silently block
 - Use `move_task` for column transitions, not raw updates
 - Review boards regularly: flag overdue tasks and stalled work
+
+## Saved changes
+
+The UI and tools share one workspace. Successful writes announce the MCP resource-list change
+notification; reads and unchanged instructions stay quiet. Added fields live in workspace schema
+overrides rather than app source. Default deletion preserves the record; `hard: true` permanently
+removes only the selected record, so prefer archive for ordinary cleanup.
+
+Task triage runs when requested or through an explicitly configured host workflow. The server
+does not install an event hook or daily schedule.

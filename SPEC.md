@@ -2,6 +2,14 @@
 
 > Kanban-style task manager with table and drag-and-drop board views.
 
+## Implementation status
+
+The domain model below remains the design reference. Its original Upjack implementation and
+task checklist are historical: the current server uses FastMCP, an app-owned JSON store and
+Synapse 0.35. Read [README.md](README.md) for current commands, [AGENTS.md](AGENTS.md) for the
+source map and [MIGRATION.md](MIGRATION.md) for existing data. Upjack hooks and schedules are
+not installed by the current runtime.
+
 ## Overview
 
 Todo Board is an AI-native task management app built on Upjack. Users organize work across boards with customizable status columns. The app ships with two Synapse UI views: a **table view** for bulk filtering, sorting, and editing, and a **Kanban board view** with drag-and-drop between status lanes.

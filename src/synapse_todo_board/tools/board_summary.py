@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def _parse_date(value: str | None) -> datetime | None:
@@ -23,13 +23,13 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 def board_summary(
-    app: UpjackApp,
+    app: BoardStore,
     board_id: str,
 ) -> dict[str, Any]:
     """Compute aggregate metrics for a board.
 
     Args:
-        app: UpjackApp instance.
+        app: BoardStore instance.
         board_id: ID of the board to summarize.
 
     Returns:
@@ -43,13 +43,12 @@ def board_summary(
         return {"error": f"Board {board_id} not found"}
 
     # 2. Query all active tasks for this board via relationship index
-    board_tasks = app.query_by_relationship("task", "belongs_to", board_id, limit=1000)
+    board_tasks = app.query_by_relationship("task", "belongs_to", board_id)
 
     # 3. Group by column
     now = datetime.now(UTC)
     today = now.date()
     columns_def = board.get("columns", [])
-    col_lookup = {c["key"]: c for c in columns_def}
 
     # Initialize per-column stats
     col_stats: dict[str, dict[str, Any]] = {}
@@ -82,12 +81,14 @@ def board_summary(
         if updated:
             days_since = (now - updated).days
             if days_since > 3:
-                stalled_tasks.append({
-                    "id": task["id"],
-                    "title": task.get("title"),
-                    "column": col_key,
-                    "days_stalled": days_since,
-                })
+                stalled_tasks.append(
+                    {
+                        "id": task["id"],
+                        "title": task.get("title"),
+                        "column": col_key,
+                        "days_stalled": days_since,
+                    }
+                )
 
     # Check WIP status
     for key, stats in col_stats.items():
