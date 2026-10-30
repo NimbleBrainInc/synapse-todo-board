@@ -37,7 +37,7 @@ mcp._mcp_server.instructions = (
     (mcp.instructions or "")
     + "\n\nCRITICAL — Board Context: The UI visible state contains the active board "
     "(selectedBoard.id). Use it for ALL task operations:\n"
-    "- Creating tasks: use create_board_task(board_id=<selectedBoard.id>, data={...}) — "
+    "- Creating tasks: use create_board_task(board_id=<selectedBoard.id>, title=..., ...) — "
     "NEVER use create_task directly, it won't link to the board and the task will be invisible.\n"
     "- Finding tasks: use find_board_task(board_id=<selectedBoard.id>, query=...)\n"
     "- NEVER call search_tasks or list_boards — the board context is already in the visible state."
