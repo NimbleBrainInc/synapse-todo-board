@@ -412,6 +412,42 @@ class TestMoveTask:
 
 
 class TestReorderColumn:
+    @pytest.mark.parametrize("invalid_target", ["missing", "other_column", "other_board"])
+    def test_invalid_later_task_leaves_earlier_task_unchanged(self, mcp, invalid_target):
+        board = _make_board(mcp)
+        _make_task(mcp, board["id"], title="First", column="todo")
+        earlier = _make_task(mcp, board["id"], title="Second", column="todo")
+
+        if invalid_target == "missing":
+            invalid_id = "tk_00000000000000000000000000"
+        elif invalid_target == "other_column":
+            invalid_id = _make_task(mcp, board["id"], title="In progress", column="in_progress")[
+                "id"
+            ]
+        else:
+            other_board = _make_board(mcp)
+            invalid_id = _make_task(
+                mcp, other_board["id"], title="On another board", column="todo"
+            )["id"]
+
+        before = _get_task(mcp, earlier["id"])
+        assert before["position"] == 1
+        result = _run(
+            _call_tool(
+                mcp,
+                "reorder_column",
+                {
+                    "board_id": board["id"],
+                    "column_key": "todo",
+                    "task_ids": [earlier["id"], invalid_id],
+                },
+            )
+        )
+
+        assert "error" in result
+        assert invalid_id in result["error"]
+        assert _get_task(mcp, earlier["id"]) == before
+
     def test_reorders_tasks_within_column(self, mcp):
         board = _make_board(mcp)
         t1 = _make_task(mcp, board["id"], title="First", column="todo")
