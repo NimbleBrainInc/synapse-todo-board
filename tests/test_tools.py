@@ -193,7 +193,7 @@ class TestArchiveTask:
         _run(_call_tool(mcp, "archive_task", {"task_id": task["id"]}))
 
         listing = _run(_call_tool(mcp, "list_tasks"))
-        remaining = {t["id"] for t in listing.get("tasks", [])}
+        remaining = {t["id"] for t in listing["entities"]}
         assert task["id"] not in remaining
 
     def test_missing_task_returns_error(self, mcp):
