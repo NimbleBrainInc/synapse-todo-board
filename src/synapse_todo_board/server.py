@@ -14,12 +14,14 @@ from synapse_todo_board.instructions import (
     read_custom_instructions,
     write_custom_instructions,
 )
+from synapse_todo_board.notifications import NotifyOnWrite
 from synapse_todo_board.tools import register_tools
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 manifest_path = _PROJECT_ROOT / "manifest.json"
 workspace_root = os.environ.get("MPAK_WORKSPACE", "./workspace")
 mcp = create_server(manifest_path, root=workspace_root)
+mcp.add_middleware(NotifyOnWrite())
 
 # Skill resource — teaches the LLM how to use this server's tools
 _SKILL_PATH = _PROJECT_ROOT / "SKILL.md"
