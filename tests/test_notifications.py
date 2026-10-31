@@ -10,7 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 
-from fastmcp import Client, FastMCP
+from fastmcp import Client, Context, FastMCP
+from mcp.server.session import ServerSession
 from mcp.types import ServerNotification
 
 from synapse_todo_board.notifications import WRITE_TOOLS, NotifyOnWrite
@@ -104,6 +105,43 @@ def test_raised_error_sends_nothing() -> None:
 
 def test_error_result_still_notifies() -> None:
     assert _run(_calls(_toy_server(), [("refuse", {})])) == [LIST_CHANGED]
+
+
+def _request_id_server() -> FastMCP:
+    server = FastMCP("toy")
+    server.add_middleware(NotifyOnWrite(write_tools={"write"}))
+
+    @server.tool()
+    def write(ctx: Context) -> dict:
+        return {"request_id": str(ctx.request_id)}
+
+    return server
+
+
+async def _call_write() -> dict:
+    async with Client(_request_id_server()) as client:
+        result = await client.call_tool("write", {})
+        return json.loads(result.content[0].text)
+
+
+def test_notification_is_tied_to_the_call(monkeypatch) -> None:
+    sent: list[dict] = []
+
+    async def record(self, notification, related_request_id=None):
+        sent.append({"related_request_id": related_request_id})
+
+    monkeypatch.setattr(ServerSession, "send_notification", record)
+    result = _run(_call_write())
+    assert [str(s["related_request_id"]) for s in sent] == [result["request_id"]]
+
+
+def test_send_failure_keeps_the_tool_result(monkeypatch) -> None:
+    async def explode(self, notification, related_request_id=None):
+        raise RuntimeError("stream closed")
+
+    monkeypatch.setattr(ServerSession, "send_notification", explode)
+    result = _run(_call_write())
+    assert set(result) == {"request_id"}
 
 
 # ---------------------------------------------------------------------------
