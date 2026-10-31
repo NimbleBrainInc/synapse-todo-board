@@ -11,7 +11,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable
 
+from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.middleware import Middleware, MiddlewareContext
+from mcp.server.auth.middleware.bearer_auth import RequireAuthMiddleware
 from mcp.types import ResourceListChangedNotification, ServerNotification
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,18 @@ WRITE_TOOLS = frozenset(
 )
 
 
+def _answers_in_json() -> bool:
+    """Read the transport mode on the route serving this request."""
+    try:
+        endpoint = get_http_request().scope.get("endpoint")
+    except RuntimeError:
+        return False
+    if isinstance(endpoint, RequireAuthMiddleware):
+        endpoint = endpoint.app
+    manager = getattr(endpoint, "session_manager", None)
+    return bool(manager is not None and manager.json_response)
+
+
 class NotifyOnWrite(Middleware):
     """Send `notifications/resources/list_changed` after a write tool call.
 
@@ -53,11 +67,11 @@ class NotifyOnWrite(Middleware):
         ctx = context.fastmcp_context
         if context.message.name in self._write_tools and ctx is not None:
             try:
-                # Tied to the call, so streamable HTTP sends it on the call's
-                # own response stream, which a stateless server also has.
+                # JSON POSTs need a standing GET stream to deliver notices;
+                # stateless JSON has none. SSE POSTs can carry both notices and responses.
                 await ctx.session.send_notification(
                     ServerNotification(ResourceListChangedNotification()),
-                    related_request_id=ctx.request_id,
+                    related_request_id=None if _answers_in_json() else ctx.request_id,
                 )
             except Exception:
                 logger.warning("Board change notification could not be sent", exc_info=True)
