@@ -83,3 +83,10 @@ def test_settings_panel_resource_is_published(mcp) -> None:
     # handler must branch on it or the panel shows "Saved" for a rejected body.
     assert "structuredContent" in body, "save handler must read structuredContent"
     assert 'status === "error"' in body, "save handler must branch on the error status"
+    # The error branch must return before the save is recorded, or a rejected
+    # body still becomes the Reset baseline and the panel shows "Saved".
+    branch = body.index('status === "error"')
+    assert branch < body.index("return;", branch) < body.index("lastSaved = ta.value", branch), (
+        "error branch must return before lastSaved is updated"
+    )
+    assert '"Cleared"' in body, "an empty save must say Cleared"
