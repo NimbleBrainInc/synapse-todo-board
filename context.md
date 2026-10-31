@@ -18,15 +18,15 @@ When the user asks to find, move, update, or reference a task by name:
 - **Tasks** belong to **Boards** via the `belongs_to` relationship
 - Every task lives on exactly one board
 - A board can have many tasks
-- **When creating a task, you MUST include** `relationships: [{ rel: "belongs_to", target: "<board_id>" }]` in the data. Without this, the task is orphaned and invisible in the UI. Use `selectedBoard.id` from the visible state as the target.
+- Create tasks with `create_board_task(board_id=<selectedBoard.id>, title="...")`. It adds the `belongs_to` relationship. `create_task` is hidden from the tool list; calling it directly leaves the task without a board, so it never shows in the UI.
 
 ## Querying by Relationship
 
 Use relationship tools instead of listing and filtering manually:
 
 - **Find all tasks on a board**: `query_tasks_by_relationship(rel="belongs_to", target_id="<board_id>")` — uses the reverse index, supports `filter` and `limit`
-- **Load a task with its board**: `get_task_composite(entity_id="<task_id>")` — returns the task plus related entities in one call
-- **Follow one relationship**: `get_related_task(entity_id="<task_id>", rel="belongs_to")` — resolves the linked board directly
+- **Load a task with its board**: `get_task_composite(task_id="<task_id>")` — returns the task plus related entities in one call
+- **Follow one relationship**: `get_related_task(task_id="<task_id>", rel="belongs_to")` — resolves the linked board directly
 
 Prefer `query_tasks_by_relationship` over `list_tasks` + client-side filtering.
 
@@ -86,7 +86,7 @@ WIP limits are guardrails, not hard walls. Respecting them keeps work flowing; i
 
 ## Custom Tools
 
-Standard CRUD tools (create, get, update, list, search, delete) are available for both boards and tasks. These domain-specific tools handle operations that need multi-entity reads or business logic:
+Boards expose create/get/update/list/search/delete. Tasks expose get/update/list/search/delete; creation uses the board-scoped tool below. These domain-specific tools handle operations that need multi-entity reads or business logic:
 
 ### `create_board_task`
 Create a task on a specific board. **ALWAYS use this instead of `create_task`** — it auto-links the task to the board via the `belongs_to` relationship so it appears in the UI. Pass the board ID from visible state (`selectedBoard.id`) and the task data (title, column, priority, etc.). The column defaults to the board's default if not specified.

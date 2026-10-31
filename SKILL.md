@@ -8,7 +8,7 @@ The UI pushes visible state with the active board (`selectedBoard.id`, `selected
 
 ### Creating tasks
 
-Use `create_board_task(board_id, data)` — never `create_task`. The board-specific tool auto-links the task via a `belongs_to` relationship so it appears in the UI. Bare `create_task` creates an orphan that's invisible on any board.
+Use `create_board_task(board_id, title, ...)` with flat arguments. The board-specific tool links the task with a `belongs_to` relationship so it appears in the UI. `create_task` is hidden from the tool list; calling it directly leaves the task without a board, so it never shows in the UI.
 
 ### Finding tasks
 
