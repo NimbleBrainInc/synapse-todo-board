@@ -30,6 +30,8 @@ export interface ResolvedTokens {
   dangerSoft: string;
   success: string;
   warning: string;
+  /** The page inset; inside `AppFrame` it narrows with the frame, as the host's top bar does. */
+  gutter: string;
 }
 
 const RESOLVED: ResolvedTokens = {
@@ -54,6 +56,7 @@ const RESOLVED: ResolvedTokens = {
   dangerSoft: `color-mix(in oklab, ${ui.danger} 14%, transparent)`,
   success: ui.success,
   warning: ui.warning,
+  gutter: ui.gutter,
 };
 
 export function useStyleTokens(): ResolvedTokens {
