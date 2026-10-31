@@ -34,9 +34,9 @@ def reorder_column(
     if column_key not in column_keys:
         return {"error": f"Column '{column_key}' does not exist on board {board_id}"}
 
-    # 2. Validate each task belongs to this column, then update position
-    order: list[dict[str, Any]] = []
-    for idx, tid in enumerate(task_ids):
+    # 2. Validate every task before changing any saved position.
+    validated: list[tuple[str, dict[str, Any]]] = []
+    for tid in task_ids:
         try:
             task = app.get_entity("task", tid)
         except FileNotFoundError:
@@ -53,6 +53,10 @@ def reorder_column(
         if not belongs:
             return {"error": f"Task {tid} does not belong to board {board_id}"}
 
+        validated.append((tid, task))
+
+    order: list[dict[str, Any]] = []
+    for idx, (tid, task) in enumerate(validated):
         app.update_entity("task", tid, {"position": idx})
         order.append({
             "id": tid,
