@@ -187,7 +187,7 @@ function BulkActionBar({ count, columns, onChangeColumn, onSetPriority, onArchiv
       className="tb-bulk-bar"
       gap="0.75rem"
       style={{
-        padding: "0.5rem 1rem",
+        padding: `0.5rem ${t.gutter}`,
         background: t.accentSoft,
         borderBottom: `1px solid ${t.border}`,
         fontSize: "0.8rem",
@@ -425,7 +425,7 @@ export default function TableView({ tasks, board, callTool, onRefresh }: TableVi
         />
       )}
 
-      <div className="tb-table-wrap" style={{ flex: 1, overflow: "auto", padding: "0 1rem" }}>
+      <div className="tb-table-wrap" style={{ flex: 1, overflow: "auto", padding: `0 ${t.gutter}` }}>
         {sorted.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem 1rem", color: t.fgMuted }}>
             No tasks match the current filters.

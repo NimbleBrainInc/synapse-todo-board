@@ -69,7 +69,7 @@ export default function FilterBar({ filters, onChange, columns, assignees }: Fil
         display: "flex",
         alignItems: "flex-end",
         gap: "0.75rem",
-        padding: "0.6rem 1rem",
+        padding: `0.6rem ${t.gutter}`,
         borderBottom: `1px solid ${t.border}`,
         background: t.bgSubtle,
         flexWrap: "wrap",

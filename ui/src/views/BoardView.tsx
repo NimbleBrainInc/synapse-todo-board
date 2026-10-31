@@ -3,6 +3,7 @@ import { useApp } from "@nimblebrain/synapse/react";
 import Column from "../components/Column.js";
 import type { ColumnDef } from "../components/Column.js";
 import type { Task } from "../components/TaskCard.js";
+import { useStyleTokens } from "../tokens";
 
 // -- Types --
 
@@ -59,10 +60,13 @@ export default function BoardView({
 
   // -- Board layout --
 
+  const t = useStyleTokens();
   const containerStyle: CSSProperties = {
     display: "flex",
     gap: "0.75rem",
-    padding: "1rem",
+    padding: `1rem ${t.gutter}`,
+    // `width: 100%` includes the gutters, so the board ends one gutter short of the right edge.
+    boxSizing: "border-box",
     overflowX: "auto",
     minHeight: "calc(100vh - 60px)",
     alignItems: "flex-start",
