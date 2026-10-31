@@ -244,3 +244,57 @@ def test_a_scan_skips_files_that_are_not_records(store, workspace, tmp_path):
     found = store.query_by_relationship("task", "belongs_to", LEGACY["board"]["id"])
     assert [task["id"] for task in found] == expected
     assert store.rebuild_index()["entries"] == 1
+
+
+def test_search_matches_text_and_filters_and_hides_deleted_unless_asked(store):
+    urgent = store.create_entity("task", {**on_board("Fix login"), "priority": "high"})
+    store.create_entity("task", {**on_board("Fix footer"), "priority": "low"})
+    gone = store.create_entity("task", {**on_board("Fix gone"), "priority": "high"})
+    store.delete_entity("task", gone["id"])
+
+    found = store.search_entities("task", query="FIX", filter={"priority": "high"})
+    assert [task["id"] for task in found] == [urgent["id"]]
+
+    deleted = store.search_entities("task", query="fix", filter={"status": "deleted"})
+    assert [task["id"] for task in deleted] == [gone["id"]]
+
+
+def test_search_sorts_every_match_before_applying_the_limit(store):
+    for position in (5, 1, 3):
+        store.create_entity("task", {**on_board(f"Sorted {position}"), "position": position})
+
+    ascending = store.search_entities("task", query="sorted", sort="position", limit=2)
+    descending = store.search_entities("task", query="sorted", sort="-position", limit=2)
+
+    assert [task["position"] for task in ascending] == [1, 3]
+    assert [task["position"] for task in descending] == [5, 3]
+
+
+def test_relationship_query_filters_before_applying_the_limit(store):
+    board_id = LEGACY["board"]["id"]
+    store.create_entity("task", {**on_board("Low"), "priority": "low"})
+    high = store.create_entity("task", {**on_board("High"), "priority": "high"})
+
+    found = store.query_by_relationship(
+        "task", "belongs_to", board_id, filter={"priority": "high"}, limit=1
+    )
+
+    assert [task["id"] for task in found] == [high["id"]]
+    assert len(store.query_by_relationship("task", "belongs_to", board_id, limit=2)) == 2
+
+
+def test_composite_groups_forward_edges_and_reverse_edges_by_rel(store):
+    board_id = LEGACY["board"]["id"]
+    task_id = LEGACY["task"]["id"]
+
+    task = store.get_composite("task", task_id)
+    board = store.get_composite("board", board_id)
+
+    assert task["id"] == task_id
+    assert {rel: [r["id"] for r in found] for rel, found in task["_related"].items()} == {
+        "belongs_to": [board_id]
+    }
+    assert {rel: [r["id"] for r in found] for rel, found in board["_related"].items()} == {
+        "~belongs_to": [task_id]
+    }
+    assert store.get_composite("board", board_id, depth=0)["_related"] == {}
