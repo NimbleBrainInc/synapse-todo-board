@@ -12,7 +12,7 @@ def _parse_date(value: str | None) -> datetime | None:
         return None
     try:
         # Try full ISO datetime first
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value)
     except ValueError:
         pass
     try:
@@ -49,7 +49,6 @@ def board_summary(
     now = datetime.now(UTC)
     today = now.date()
     columns_def = board.get("columns", [])
-    col_lookup = {c["key"]: c for c in columns_def}
 
     # Initialize per-column stats
     col_stats: dict[str, dict[str, Any]] = {}
@@ -90,7 +89,7 @@ def board_summary(
                 })
 
     # Check WIP status
-    for key, stats in col_stats.items():
+    for stats in col_stats.values():
         wip = stats["wip_limit"]
         if wip and wip > 0 and stats["count"] > wip:
             stats["wip_ok"] = False

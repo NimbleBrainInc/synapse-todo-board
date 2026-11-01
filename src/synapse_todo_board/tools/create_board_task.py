@@ -64,9 +64,9 @@ def create_board_task(
     if "position" not in data:
         existing = app.query_by_relationship("task", "belongs_to", board_id)
         positions = [
-            t.get("position")
+            position
             for t in existing
-            if t.get("column") == column and isinstance(t.get("position"), int)
+            if t.get("column") == column and isinstance(position := t.get("position"), int)
         ]
         data["position"] = (max(positions) + 1) if positions else 0
 
