@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Awaitable, Callable
 
 from fastmcp import Client, Context, FastMCP
 from mcp.server.session import ServerSession
@@ -43,7 +44,12 @@ NOT_BOARD_TOOLS = {"set_custom_instructions"}
 
 
 async def _calls(
-    server, calls: list[tuple[str, dict]], *, raises: tuple[str, ...] = ()
+    server,
+    calls: list[tuple[str, dict]],
+    *,
+    raises: tuple[str, ...] = (),
+    auth: str | None = None,
+    before_calls: Callable[[], Awaitable[None]] | None = None,
 ) -> list[str]:
     """Run tool calls in one session; return the notification methods seen.
 
@@ -55,7 +61,9 @@ async def _calls(
         if isinstance(message, ServerNotification):
             seen.append(message.root.method)
 
-    async with Client(server, message_handler=on_message) as client:
+    async with Client(server, message_handler=on_message, auth=auth) as client:
+        if before_calls is not None:
+            await before_calls()
         for name, arguments in calls:
             result = await client.call_tool(name, arguments, raise_on_error=False)
             assert result.is_error == (name in raises), (name, result.content)
@@ -68,8 +76,8 @@ async def _calls(
 # ---------------------------------------------------------------------------
 
 
-def _toy_server() -> FastMCP:
-    server = FastMCP("toy")
+def _toy_server(*, auth=None) -> FastMCP:
+    server = FastMCP("toy", auth=auth)
     server.add_middleware(NotifyOnWrite(write_tools={"write", "fail", "refuse"}))
 
     @server.tool()
@@ -124,7 +132,7 @@ async def _call_write() -> dict:
         return json.loads(result.content[0].text)
 
 
-def test_notification_is_tied_to_the_call(monkeypatch) -> None:
+def test_in_memory_notification_is_tied_to_the_call(monkeypatch) -> None:
     sent: list[dict] = []
 
     async def record(self, notification, related_request_id=None):
