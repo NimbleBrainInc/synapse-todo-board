@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTheme, useApp, useModelContext } from "@nimblebrain/synapse/react";
-import { Button, EmptyState, Inline, SegmentedControl, Spinner, Stack } from "@nimblebrain/synapse/ui";
+import { AppFrame, Button, EmptyState, Inline, SegmentedControl, Spinner, Stack } from "@nimblebrain/synapse/ui";
 import { useBoards } from "./hooks/useBoards";
 import { useTasks } from "./hooks/useTasks";
 import type { Task } from "./hooks/useTasks";
@@ -661,15 +661,10 @@ export default function App() {
 
   // -- Render --
 
+  // AppFrame sets the font and colours and gives `t.gutter` the host's wide or narrow value
+  // by the frame's width, so the header and views inset to the host's top bar title.
   return (
-    <div
-      style={{
-        fontFamily: t.fontFamily,
-        minHeight: "100vh",
-        background: t.bg,
-        color: t.fg,
-      }}
-    >
+    <AppFrame style={{ height: "auto", minHeight: "100vh" }}>
       {/* ---- Header ---- */}
       <header
         className="tb-header"
@@ -677,7 +672,7 @@ export default function App() {
           display: "flex",
           alignItems: "center",
           gap: "0.75rem",
-          padding: "0.75rem 1rem",
+          padding: `0.75rem ${t.gutter}`,
           borderBottom: `1px solid ${t.border}`,
           background: t.bgRaised,
         }}
@@ -778,6 +773,6 @@ export default function App() {
           onSaved={refreshTasks}
         />
       )}
-    </div>
+    </AppFrame>
   );
 }
