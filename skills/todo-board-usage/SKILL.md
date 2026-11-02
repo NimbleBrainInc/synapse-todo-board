@@ -1,3 +1,8 @@
+---
+name: todo-board-usage
+description: Choose the right Todo Board tool for each request, scoped to the board the person has open, for creating, finding, moving, reordering, summarizing and archiving tasks.
+---
+
 # Todo Board — Tool Usage Guide
 
 ## Board Context

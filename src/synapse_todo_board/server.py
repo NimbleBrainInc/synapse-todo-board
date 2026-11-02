@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 from fastmcp import FastMCP
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
 
 from synapse_todo_board.entity_tools import instructions, register_entity_tools
 from synapse_todo_board.instructions import (
@@ -17,6 +18,7 @@ from synapse_todo_board.instructions import (
     write_custom_instructions,
 )
 from synapse_todo_board.notifications import NotifyOnWrite
+from synapse_todo_board.skills import SkillsOnEveryEra
 from synapse_todo_board.store import BoardStore
 from synapse_todo_board.tools import register_tools
 
@@ -36,15 +38,23 @@ mcp.add_middleware(NotifyOnWrite())
 store = BoardStore(data_root, _PROJECT_ROOT)
 register_entity_tools(mcp, store, _upjack)
 
-# Skill resource — teaches the LLM how to use this server's tools
-_SKILL_PATH = _PROJECT_ROOT / "SKILL.md"
-_SKILL_CONTENT = _SKILL_PATH.read_text() if _SKILL_PATH.exists() else ""
+# Each folder under skills/ is one skill, listed by skills/list and served at
+# skill://<folder>/SKILL.md; the folder name must equal the frontmatter name.
+SKILLS_DIR = _PROJECT_ROOT / "skills"
+_skills = SkillsDirectoryProvider(SKILLS_DIR, experimental_skills=True)
+mcp.add_provider(_skills)
+mcp.add_extension(SkillsOnEveryEra(providers=[_skills]))
+
+# The tool guide used to be the root SKILL.md, read at this URI. It is now the
+# todo-board-usage skill; this URI keeps answering with the same file for
+# callers that still ask for it.
+_USAGE_SKILL = SKILLS_DIR / "todo-board-usage" / "SKILL.md"
 
 
 @mcp.resource("skill://todo-board/usage")
 def todo_board_skill() -> str:
     """Tool selection and usage guidance for the Todo Board."""
-    return _SKILL_CONTENT
+    return _USAGE_SKILL.read_text()
 
 
 # Append board-scoping instructions — the agent MUST see this before any tool call
