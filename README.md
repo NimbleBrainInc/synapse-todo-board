@@ -39,7 +39,7 @@ Automatically classifies, prioritizes, and organizes tasks so the user spends ti
 
 ## Skills over MCP
 
-The server serves its skills through the SEP-2640 skills extension (`io.modelcontextprotocol/skills`). `skills/list` lists each folder under `skills/`, and `skills/get` and `resources/read` serve it at `skill://<folder>/SKILL.md`. Both methods answer on the 2025-11-25 handshake era NimbleBrain negotiates as well as on 2026-07-28.
+The server serves its skills through the SEP-2640 skills extension (`io.modelcontextprotocol/skills`). `skills/list` lists each folder under `skills/`, and `skills/get` and `resources/read` serve it at `skill://<folder>/SKILL.md`. Both methods answer on 2026-07-28, the era NimbleBrain connects on, and on the older 2025-11-25 handshake era as well.
 
 | Skill | URI |
 |-------|-----|
