@@ -163,7 +163,7 @@ async def _list_tools_full(mcp) -> dict[str, dict[str, Any]]:
 
     async with Client(mcp) as client:
         tools = await client.list_tools()
-        return {t.name: {"inputSchema": t.inputSchema or {}} for t in tools}
+        return {t.name: {"inputSchema": t.input_schema or {}} for t in tools}
 
 
 # ---------------------------------------------------------------------------

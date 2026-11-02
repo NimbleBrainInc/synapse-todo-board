@@ -7,6 +7,7 @@ the resource returns saved text (or empty), the tool writes it, and the
 
 from __future__ import annotations
 
+import importlib
 
 from fastmcp import Client
 
@@ -43,6 +44,42 @@ def test_set_custom_instructions_writes_to_workspace_root(mcp, tmp_path) -> None
     expected = tmp_path / "workspace" / "custom-instructions.md"
     assert expected.exists()
     assert expected.read_text(encoding="utf-8") == "Triage on Mondays only."
+
+
+def test_upjack_root_moves_records_but_not_instructions(tmp_path, monkeypatch) -> None:
+    """With UPJACK_ROOT set, records go there and instructions stay in MPAK_WORKSPACE.
+
+    That is where the upjack-backed server put each of them, so a deployment
+    that sets both finds its data and its saved instructions where it left them.
+    """
+    records = tmp_path / "records"
+    workspace = tmp_path / "workspace"
+    records.mkdir()
+    workspace.mkdir()
+    monkeypatch.setenv("UPJACK_ROOT", str(records))
+    monkeypatch.setenv("MPAK_WORKSPACE", str(workspace))
+
+    import synapse_todo_board.server as server_module
+
+    importlib.reload(server_module)
+    mcp = server_module.mcp
+
+    _run(_call_tool(mcp, "set_custom_instructions", {"text": "Triage on Mondays only."}))
+    board = _run(
+        _call_tool(
+            mcp,
+            "create_board",
+            {"name": "Roots", "columns": [{"key": "todo", "label": "To Do"}]},
+        )
+    )
+
+    assert (workspace / "custom-instructions.md").read_text(encoding="utf-8") == (
+        "Triage on Mondays only."
+    )
+    assert not (records / "custom-instructions.md").exists()
+    assert (records / "apps" / "todo-board" / "data" / "boards" / f"{board['id']}.json").exists()
+    assert not (workspace / "apps").exists()
+    assert _run(_read_resource(mcp, "app://instructions")) == "Triage on Mondays only."
 
 
 def test_empty_text_clears_existing_instructions(mcp, tmp_path) -> None:

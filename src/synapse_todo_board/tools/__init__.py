@@ -14,12 +14,12 @@ from synapse_todo_board.tools.reorder_column import reorder_column
 __all__ = ["register_tools"]
 
 
-def register_tools(mcp, app):
+def register_tools(mcp, store):
     """Register all custom tools on the MCP server.
 
     Args:
         mcp: FastMCP server instance.
-        app: UpjackApp instance for entity access.
+        store: BoardStore for entity access.
     """
 
     @mcp.tool(
@@ -54,7 +54,7 @@ def register_tools(mcp, app):
             data["due_date"] = due_date
         if effort:
             data["effort"] = effort
-        return create_board_task(app, board_id, data)
+        return create_board_task(store, board_id, data)
 
     @mcp.tool(
         name="find_board_task",
@@ -69,7 +69,7 @@ def register_tools(mcp, app):
         board_id: str,
         query: str,
     ) -> dict:
-        return find_board_task(app, board_id, query)
+        return find_board_task(store, board_id, query)
 
     @mcp.tool(
         name="move_task",
@@ -85,7 +85,7 @@ def register_tools(mcp, app):
         target_column: str,
         position: int | None = None,
     ) -> dict:
-        return move_task(app, task_id, target_column, position)
+        return move_task(store, task_id, target_column, position)
 
     @mcp.tool(
         name="reorder_column",
@@ -100,7 +100,7 @@ def register_tools(mcp, app):
         column_key: str,
         task_ids: list[str],
     ) -> dict:
-        return reorder_column(app, board_id, column_key, task_ids)
+        return reorder_column(store, board_id, column_key, task_ids)
 
     @mcp.tool(
         name="board_summary",
@@ -111,7 +111,7 @@ def register_tools(mcp, app):
         ),
     )
     def _board_summary(board_id: str) -> dict:
-        return board_summary(app, board_id)
+        return board_summary(store, board_id)
 
     @mcp.tool(
         name="batch_archive",
@@ -124,7 +124,7 @@ def register_tools(mcp, app):
         board_id: str,
         older_than_days: int = 7,
     ) -> dict:
-        return batch_archive(app, board_id, older_than_days)
+        return batch_archive(store, board_id, older_than_days)
 
     @mcp.tool(
         name="archive_task",
@@ -136,4 +136,4 @@ def register_tools(mcp, app):
         ),
     )
     def _archive_task(task_id: str) -> dict:
-        return archive_task(app, task_id)
+        return archive_task(store, task_id)

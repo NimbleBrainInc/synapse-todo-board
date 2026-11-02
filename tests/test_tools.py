@@ -28,7 +28,6 @@ from fastmcp.exceptions import ToolError
 
 from tests.conftest import _call_tool, _run
 
-
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------

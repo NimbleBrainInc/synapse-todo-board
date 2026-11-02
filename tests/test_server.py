@@ -24,7 +24,6 @@ from fastmcp.exceptions import ToolError
 
 from tests.conftest import _call_tool, _list_tool_names, _run
 
-
 # ---------------------------------------------------------------------------
 # Published tool contract
 # ---------------------------------------------------------------------------
@@ -82,10 +81,10 @@ async def _tool_contract(mcp) -> dict[str, dict]:
         tools = await client.list_tools()
     return {
         tool.name: {
-            "required": sorted(tool.inputSchema.get("required", [])),
+            "required": sorted(tool.input_schema.get("required", [])),
             "properties": {
                 name: _property_type(prop)
-                for name, prop in sorted(tool.inputSchema.get("properties", {}).items())
+                for name, prop in sorted(tool.input_schema.get("properties", {}).items())
             },
         }
         for tool in sorted(tools, key=lambda t: t.name)
@@ -98,7 +97,7 @@ async def _tool_contract(mcp) -> dict[str, dict]:
 
 
 def test_server_instantiates(mcp):
-    """`create_server(manifest, root=tmp_path)` produces a FastMCP instance."""
+    """The server module builds a FastMCP instance."""
     assert isinstance(mcp, FastMCP)
 
 
@@ -130,9 +129,9 @@ def test_tool_schemas_have_explicit_object_roots_for_strict_hosts(mcp):
     async def check():
         async with Client(mcp) as client:
             for tool in await client.list_tools():
-                assert tool.inputSchema.get("type") == "object", tool.name
-                if tool.outputSchema is not None:
-                    assert tool.outputSchema.get("type") == "object", tool.name
+                assert tool.input_schema.get("type") == "object", tool.name
+                if tool.output_schema is not None:
+                    assert tool.output_schema.get("type") == "object", tool.name
 
     _run(check())
 

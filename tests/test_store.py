@@ -12,7 +12,6 @@ from pathlib import Path
 
 import pytest
 from jsonschema import ValidationError
-from upjack.app import UpjackApp
 
 from synapse_todo_board.store import BoardStore
 
@@ -191,19 +190,6 @@ def test_rebuild_index_writes_the_upjack_reverse_index(store, workspace):
     assert index == {
         "reverse": {LEGACY["board"]["id"]: [{"source": LEGACY["task"]["id"], "rel": "belongs_to"}]}
     }
-
-
-def test_upjack_finds_every_task_after_store_writes(store, workspace):
-    upjack = UpjackApp.from_manifest(PROJECT_ROOT / "manifest.json", root=workspace)
-    board_id = LEGACY["board"]["id"]
-    upjack.query_by_relationship("task", "belongs_to", board_id)
-
-    store.update_entity("task", LEGACY["task"]["id"], {"title": "Changed"})
-    store.create_entity("task", on_board("From the store"))
-    upjack.create_entity("task", on_board("From Upjack"))
-
-    found = upjack.query_by_relationship("task", "belongs_to", board_id)
-    assert sorted(task["title"] for task in found) == ["Changed", "From Upjack", "From the store"]
 
 
 @pytest.mark.parametrize("entity_id", ["../../../../outside", "tk_short", "bd_" + "0" * 26])

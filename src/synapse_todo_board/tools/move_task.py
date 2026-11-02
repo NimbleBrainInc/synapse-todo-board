@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 _DONE_KEYWORDS = ("done", "complete", "closed")
 
@@ -17,7 +17,7 @@ def _now_iso() -> str:
 
 
 def move_task(
-    app: UpjackApp,
+    store: BoardStore,
     task_id: str,
     target_column: str,
     position: int | None = None,
@@ -25,7 +25,7 @@ def move_task(
     """Move a task to a different column with WIP limit checks.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         task_id: ID of the task to move.
         target_column: Column key to move the task to.
         position: Position within the target column (default: append to end).
@@ -36,8 +36,8 @@ def move_task(
     """
     # 1. Load task
     try:
-        task = app.get_entity("task", task_id)
-    except FileNotFoundError:
+        task = store.get_entity("task", task_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Task {task_id} not found"}
 
     # 2. Load board via belongs_to relationship
@@ -51,8 +51,8 @@ def move_task(
         return {"error": f"Task {task_id} has no board relationship"}
 
     try:
-        board = app.get_entity("board", board_id)
-    except FileNotFoundError:
+        board = store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     # 3. Validate target_column exists
@@ -68,7 +68,7 @@ def move_task(
 
     if wip_limit and wip_limit > 0:
         # Count tasks currently in target column
-        all_tasks = app.list_entities("task", status="active", limit=1000)
+        all_tasks = store.list_entities("task", status="active", limit=1000)
         count_in_column = sum(
             1
             for t in all_tasks
@@ -93,7 +93,7 @@ def move_task(
         update_data["position"] = position
     else:
         # Append to end: find max position in target column
-        all_tasks = app.list_entities("task", status="active", limit=1000)
+        all_tasks = store.list_entities("task", status="active", limit=1000)
         positions = [
             t.get("position", 0)
             for t in all_tasks
@@ -115,7 +115,7 @@ def move_task(
         update_data["completed_at"] = None
 
     # 7. Apply update
-    updated_task = app.update_entity("task", task_id, update_data)
+    updated_task = store.update_entity("task", task_id, update_data)
 
     # 8. Build next_step
     if completion_set:
