@@ -23,8 +23,8 @@ from tests.conftest import _run
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 SKILLS_EXTENSION = "io.modelcontextprotocol/skills"
-# NimbleBrain negotiates 2025-11-25 through the initialize handshake today; a modern client
-# discovers the sessionless 2026-07-28 era. Skills must answer on both.
+# NimbleBrain connects on the sessionless 2026-07-28 era; a client still on the initialize
+# handshake negotiates 2025-11-25. Skills must answer on both.
 ERAS = [("legacy", "2025-11-25"), ("auto", "2026-07-28")]
 EXPECTED_SKILLS = [
     "skill://task-triage/SKILL.md",
