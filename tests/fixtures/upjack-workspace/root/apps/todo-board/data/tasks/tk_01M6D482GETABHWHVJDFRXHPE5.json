@@ -1,0 +1,20 @@
+{
+  "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+  "type": "task",
+  "version": 1,
+  "created_at": "2026-11-02T03:18:32.718572Z",
+  "updated_at": "2026-11-02T03:18:32.727212Z",
+  "created_by": "agent",
+  "status": "deleted",
+  "tags": [],
+  "relationships": [
+    {
+      "rel": "belongs_to",
+      "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+    }
+  ],
+  "title": "Dropped task",
+  "column": "doing",
+  "priority": "medium",
+  "position": 0
+}

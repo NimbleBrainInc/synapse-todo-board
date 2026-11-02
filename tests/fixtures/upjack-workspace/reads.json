@@ -1,0 +1,768 @@
+[
+  {
+    "tool": "get_board",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV"
+    },
+    "result": {
+      "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "type": "board",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.706423Z",
+      "updated_at": "2026-11-02T03:18:32.706423Z",
+      "created_by": "agent",
+      "status": "active",
+      "tags": [],
+      "relationships": [],
+      "name": "Migrated board",
+      "description": "Written by the upjack-backed server for the migration test.",
+      "columns": [
+        {
+          "key": "todo",
+          "label": "To Do"
+        },
+        {
+          "key": "doing",
+          "label": "Doing"
+        },
+        {
+          "key": "done",
+          "label": "Done"
+        }
+      ],
+      "default_column": "todo"
+    }
+  },
+  {
+    "tool": "get_task",
+    "arguments": {
+      "task_id": "tk_01M6D482GC5PRKAGFGZVH3XADD"
+    },
+    "result": {
+      "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+      "type": "task",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.716270Z",
+      "updated_at": "2026-11-02T03:18:32.720402Z",
+      "created_by": "agent",
+      "status": "active",
+      "tags": [
+        "migration"
+      ],
+      "relationships": [
+        {
+          "rel": "belongs_to",
+          "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+        }
+      ],
+      "title": "Migrated task, renamed",
+      "description": "Kept through the migration.",
+      "priority": "high",
+      "due_date": "2026-11-14",
+      "effort": "small",
+      "column": "todo",
+      "position": 0,
+      "legacy_custom": {
+        "keep": true
+      }
+    }
+  },
+  {
+    "tool": "get_task",
+    "arguments": {
+      "task_id": "tk_01M6D482GETABHWHVJDFRXHPE5"
+    },
+    "result": {
+      "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+      "type": "task",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.718572Z",
+      "updated_at": "2026-11-02T03:18:32.727212Z",
+      "created_by": "agent",
+      "status": "deleted",
+      "tags": [],
+      "relationships": [
+        {
+          "rel": "belongs_to",
+          "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+        }
+      ],
+      "title": "Dropped task",
+      "column": "doing",
+      "priority": "medium",
+      "position": 0
+    }
+  },
+  {
+    "tool": "list_boards",
+    "arguments": {},
+    "result": {
+      "entities": [
+        {
+          "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+          "type": "board",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.706423Z",
+          "updated_at": "2026-11-02T03:18:32.706423Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [],
+          "relationships": [],
+          "name": "Migrated board",
+          "description": "Written by the upjack-backed server for the migration test.",
+          "columns": [
+            {
+              "key": "todo",
+              "label": "To Do"
+            },
+            {
+              "key": "doing",
+              "label": "Doing"
+            },
+            {
+              "key": "done",
+              "label": "Done"
+            }
+          ],
+          "default_column": "todo"
+        }
+      ],
+      "count": 1,
+      "status_filter": "active",
+      "limit": 50
+    }
+  },
+  {
+    "tool": "list_tasks",
+    "arguments": {},
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.716270Z",
+          "updated_at": "2026-11-02T03:18:32.720402Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [
+            "migration"
+          ],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Migrated task, renamed",
+          "description": "Kept through the migration.",
+          "priority": "high",
+          "due_date": "2026-11-14",
+          "effort": "small",
+          "column": "todo",
+          "position": 0,
+          "legacy_custom": {
+            "keep": true
+          }
+        }
+      ],
+      "count": 1,
+      "status_filter": "active",
+      "limit": 50
+    }
+  },
+  {
+    "tool": "list_tasks",
+    "arguments": {
+      "status": "deleted"
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.718572Z",
+          "updated_at": "2026-11-02T03:18:32.727212Z",
+          "created_by": "agent",
+          "status": "deleted",
+          "tags": [],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Dropped task",
+          "column": "doing",
+          "priority": "medium",
+          "position": 0
+        }
+      ],
+      "count": 1,
+      "status_filter": "deleted",
+      "limit": 50
+    }
+  },
+  {
+    "tool": "search_boards",
+    "arguments": {
+      "query": "migrated"
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+          "type": "board",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.706423Z",
+          "updated_at": "2026-11-02T03:18:32.706423Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [],
+          "relationships": [],
+          "name": "Migrated board",
+          "description": "Written by the upjack-backed server for the migration test.",
+          "columns": [
+            {
+              "key": "todo",
+              "label": "To Do"
+            },
+            {
+              "key": "doing",
+              "label": "Doing"
+            },
+            {
+              "key": "done",
+              "label": "Done"
+            }
+          ],
+          "default_column": "todo"
+        }
+      ],
+      "count": 1,
+      "query": "migrated",
+      "limit": 20
+    }
+  },
+  {
+    "tool": "search_tasks",
+    "arguments": {
+      "query": "task"
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.716270Z",
+          "updated_at": "2026-11-02T03:18:32.720402Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [
+            "migration"
+          ],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Migrated task, renamed",
+          "description": "Kept through the migration.",
+          "priority": "high",
+          "due_date": "2026-11-14",
+          "effort": "small",
+          "column": "todo",
+          "position": 0,
+          "legacy_custom": {
+            "keep": true
+          }
+        }
+      ],
+      "count": 1,
+      "query": "task",
+      "limit": 20
+    }
+  },
+  {
+    "tool": "search_tasks",
+    "arguments": {
+      "filter": {
+        "column": "doing"
+      }
+    },
+    "result": {
+      "entities": [],
+      "count": 0,
+      "query": null,
+      "limit": 20
+    }
+  },
+  {
+    "tool": "search_tasks",
+    "arguments": {
+      "filter": {
+        "status": "deleted"
+      }
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.718572Z",
+          "updated_at": "2026-11-02T03:18:32.727212Z",
+          "created_by": "agent",
+          "status": "deleted",
+          "tags": [],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Dropped task",
+          "column": "doing",
+          "priority": "medium",
+          "position": 0
+        }
+      ],
+      "count": 1,
+      "query": null,
+      "limit": 20
+    }
+  },
+  {
+    "tool": "search_tasks",
+    "arguments": {
+      "filter": {
+        "priority": {
+          "$in": [
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "sort": "title"
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.716270Z",
+          "updated_at": "2026-11-02T03:18:32.720402Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [
+            "migration"
+          ],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Migrated task, renamed",
+          "description": "Kept through the migration.",
+          "priority": "high",
+          "due_date": "2026-11-14",
+          "effort": "small",
+          "column": "todo",
+          "position": 0,
+          "legacy_custom": {
+            "keep": true
+          }
+        }
+      ],
+      "count": 1,
+      "query": null,
+      "limit": 20
+    }
+  },
+  {
+    "tool": "query_tasks_by_relationship",
+    "arguments": {
+      "rel": "belongs_to",
+      "target_id": "bd_01M6D482G20JX0DR7F4MP61BFV"
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.716270Z",
+          "updated_at": "2026-11-02T03:18:32.720402Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [
+            "migration"
+          ],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Migrated task, renamed",
+          "description": "Kept through the migration.",
+          "priority": "high",
+          "due_date": "2026-11-14",
+          "effort": "small",
+          "column": "todo",
+          "position": 0,
+          "legacy_custom": {
+            "keep": true
+          }
+        }
+      ],
+      "count": 1
+    }
+  },
+  {
+    "tool": "query_tasks_by_relationship",
+    "arguments": {
+      "rel": "belongs_to",
+      "target_id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "filter": {
+        "column": "todo"
+      }
+    },
+    "result": {
+      "entities": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "type": "task",
+          "version": 1,
+          "created_at": "2026-11-02T03:18:32.716270Z",
+          "updated_at": "2026-11-02T03:18:32.720402Z",
+          "created_by": "agent",
+          "status": "active",
+          "tags": [
+            "migration"
+          ],
+          "relationships": [
+            {
+              "rel": "belongs_to",
+              "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+            }
+          ],
+          "title": "Migrated task, renamed",
+          "description": "Kept through the migration.",
+          "priority": "high",
+          "due_date": "2026-11-14",
+          "effort": "small",
+          "column": "todo",
+          "position": 0,
+          "legacy_custom": {
+            "keep": true
+          }
+        }
+      ],
+      "count": 1
+    }
+  },
+  {
+    "tool": "get_task_composite",
+    "arguments": {
+      "task_id": "tk_01M6D482GC5PRKAGFGZVH3XADD"
+    },
+    "result": {
+      "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+      "type": "task",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.716270Z",
+      "updated_at": "2026-11-02T03:18:32.720402Z",
+      "created_by": "agent",
+      "status": "active",
+      "tags": [
+        "migration"
+      ],
+      "relationships": [
+        {
+          "rel": "belongs_to",
+          "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+        }
+      ],
+      "title": "Migrated task, renamed",
+      "description": "Kept through the migration.",
+      "priority": "high",
+      "due_date": "2026-11-14",
+      "effort": "small",
+      "column": "todo",
+      "position": 0,
+      "legacy_custom": {
+        "keep": true
+      },
+      "_related": {
+        "belongs_to": [
+          {
+            "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+            "type": "board",
+            "version": 1,
+            "created_at": "2026-11-02T03:18:32.706423Z",
+            "updated_at": "2026-11-02T03:18:32.706423Z",
+            "created_by": "agent",
+            "status": "active",
+            "tags": [],
+            "relationships": [],
+            "name": "Migrated board",
+            "description": "Written by the upjack-backed server for the migration test.",
+            "columns": [
+              {
+                "key": "todo",
+                "label": "To Do"
+              },
+              {
+                "key": "doing",
+                "label": "Doing"
+              },
+              {
+                "key": "done",
+                "label": "Done"
+              }
+            ],
+            "default_column": "todo"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "tool": "get_task_composite",
+    "arguments": {
+      "task_id": "tk_01M6D482GETABHWHVJDFRXHPE5"
+    },
+    "result": {
+      "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+      "type": "task",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.718572Z",
+      "updated_at": "2026-11-02T03:18:32.727212Z",
+      "created_by": "agent",
+      "status": "deleted",
+      "tags": [],
+      "relationships": [
+        {
+          "rel": "belongs_to",
+          "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+        }
+      ],
+      "title": "Dropped task",
+      "column": "doing",
+      "priority": "medium",
+      "position": 0,
+      "_related": {
+        "belongs_to": [
+          {
+            "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+            "type": "board",
+            "version": 1,
+            "created_at": "2026-11-02T03:18:32.706423Z",
+            "updated_at": "2026-11-02T03:18:32.706423Z",
+            "created_by": "agent",
+            "status": "active",
+            "tags": [],
+            "relationships": [],
+            "name": "Migrated board",
+            "description": "Written by the upjack-backed server for the migration test.",
+            "columns": [
+              {
+                "key": "todo",
+                "label": "To Do"
+              },
+              {
+                "key": "doing",
+                "label": "Doing"
+              },
+              {
+                "key": "done",
+                "label": "Done"
+              }
+            ],
+            "default_column": "todo"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "tool": "get_board_composite",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV"
+    },
+    "result": {
+      "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "type": "board",
+      "version": 1,
+      "created_at": "2026-11-02T03:18:32.706423Z",
+      "updated_at": "2026-11-02T03:18:32.706423Z",
+      "created_by": "agent",
+      "status": "active",
+      "tags": [],
+      "relationships": [],
+      "name": "Migrated board",
+      "description": "Written by the upjack-backed server for the migration test.",
+      "columns": [
+        {
+          "key": "todo",
+          "label": "To Do"
+        },
+        {
+          "key": "doing",
+          "label": "Doing"
+        },
+        {
+          "key": "done",
+          "label": "Done"
+        }
+      ],
+      "default_column": "todo",
+      "_related": {
+        "~belongs_to": [
+          {
+            "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+            "type": "task",
+            "version": 1,
+            "created_at": "2026-11-02T03:18:32.716270Z",
+            "updated_at": "2026-11-02T03:18:32.720402Z",
+            "created_by": "agent",
+            "status": "active",
+            "tags": [
+              "migration"
+            ],
+            "relationships": [
+              {
+                "rel": "belongs_to",
+                "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+              }
+            ],
+            "title": "Migrated task, renamed",
+            "description": "Kept through the migration.",
+            "priority": "high",
+            "due_date": "2026-11-14",
+            "effort": "small",
+            "column": "todo",
+            "position": 0,
+            "legacy_custom": {
+              "keep": true
+            }
+          },
+          {
+            "id": "tk_01M6D482GETABHWHVJDFRXHPE5",
+            "type": "task",
+            "version": 1,
+            "created_at": "2026-11-02T03:18:32.718572Z",
+            "updated_at": "2026-11-02T03:18:32.727212Z",
+            "created_by": "agent",
+            "status": "deleted",
+            "tags": [],
+            "relationships": [
+              {
+                "rel": "belongs_to",
+                "target": "bd_01M6D482G20JX0DR7F4MP61BFV"
+              }
+            ],
+            "title": "Dropped task",
+            "column": "doing",
+            "priority": "medium",
+            "position": 0
+          }
+        ]
+      }
+    }
+  },
+  {
+    "tool": "get_related_task",
+    "arguments": {
+      "task_id": "tk_01M6D482GC5PRKAGFGZVH3XADD"
+    },
+    "result": {
+      "error": "Output validation error: 'title' is a required property"
+    }
+  },
+  {
+    "tool": "get_related_task",
+    "arguments": {
+      "task_id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+      "rel": "belongs_to"
+    },
+    "result": {
+      "error": "Output validation error: 'title' is a required property"
+    }
+  },
+  {
+    "tool": "get_related_board",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "direction": "reverse"
+    },
+    "result": {
+      "error": "Output validation error: 'name' is a required property"
+    }
+  },
+  {
+    "tool": "get_related_board",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "rel": "belongs_to",
+      "direction": "reverse"
+    },
+    "result": {
+      "error": "Output validation error: 'name' is a required property"
+    }
+  },
+  {
+    "tool": "find_board_task",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "query": "task"
+    },
+    "result": {
+      "board": {
+        "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+        "name": "Migrated board"
+      },
+      "matches": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "title": "Migrated task, renamed",
+          "column": "todo",
+          "priority": "high",
+          "assignee": null,
+          "due_date": "2026-11-14"
+        }
+      ],
+      "count": 1
+    }
+  },
+  {
+    "tool": "find_board_task",
+    "arguments": {
+      "board_id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+      "query": "renamed"
+    },
+    "result": {
+      "board": {
+        "id": "bd_01M6D482G20JX0DR7F4MP61BFV",
+        "name": "Migrated board"
+      },
+      "matches": [
+        {
+          "id": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+          "title": "Migrated task, renamed",
+          "column": "todo",
+          "priority": "high",
+          "assignee": null,
+          "due_date": "2026-11-14"
+        }
+      ],
+      "count": 1
+    }
+  }
+]

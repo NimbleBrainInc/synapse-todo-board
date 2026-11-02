@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
@@ -11,20 +11,20 @@ def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value)
     except ValueError:
         return None
 
 
 def batch_archive(
-    app: UpjackApp,
+    store: BoardStore,
     board_id: str,
     older_than_days: int = 7,
 ) -> dict[str, Any]:
     """Archive completed tasks on a board older than N days.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         board_id: ID of the board to clean.
         older_than_days: Archive tasks completed more than N days ago.
 
@@ -34,13 +34,13 @@ def batch_archive(
     """
     # 1. Load board
     try:
-        app.get_entity("board", board_id)
-    except FileNotFoundError:
+        store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     # 2. Query active tasks for this board via relationship index
     now = datetime.now(UTC)
-    board_tasks = app.query_by_relationship("task", "belongs_to", board_id, limit=1000)
+    board_tasks = store.query_by_relationship("task", "belongs_to", board_id, limit=1000)
 
     to_archive: list[dict[str, Any]] = []
     for task in board_tasks:
@@ -55,7 +55,7 @@ def batch_archive(
     # 3. Archive each matching task
     archived_list: list[dict[str, Any]] = []
     for task in to_archive:
-        app.update_entity("task", task["id"], {"status": "archived"})
+        store.update_entity("task", task["id"], {"status": "archived"})
         archived_list.append({
             "id": task["id"],
             "title": task.get("title"),

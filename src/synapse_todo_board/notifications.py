@@ -14,7 +14,7 @@ from collections.abc import Iterable
 from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from mcp.server.auth.middleware.bearer_auth import RequireAuthMiddleware
-from mcp.types import ResourceListChangedNotification, ServerNotification
+from mcp.types import ResourceListChangedNotification
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +69,9 @@ class NotifyOnWrite(Middleware):
             try:
                 # JSON POSTs need a standing GET stream to deliver notices;
                 # stateless JSON has none. SSE POSTs can carry both notices and responses.
+                # mcp 2 takes the notification itself; ServerNotification is a Union.
                 await ctx.session.send_notification(
-                    ServerNotification(ResourceListChangedNotification()),
+                    ResourceListChangedNotification(),
                     related_request_id=None if _answers_in_json() else ctx.request_id,
                 )
             except Exception:

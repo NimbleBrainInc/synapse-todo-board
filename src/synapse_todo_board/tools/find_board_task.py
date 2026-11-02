@@ -2,18 +2,18 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def find_board_task(
-    app: UpjackApp,
+    store: BoardStore,
     board_id: str,
     query: str,
 ) -> dict[str, Any]:
     """Search for tasks on a specific board matching a query.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         board_id: Board to scope the search to.
         query: Case-insensitive substring to match against task titles.
 
@@ -22,12 +22,12 @@ def find_board_task(
     """
     # Validate board exists
     try:
-        board = app.get_entity("board", board_id)
-    except FileNotFoundError:
+        board = store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     # Get all tasks on this board via relationship index
-    board_tasks = app.query_by_relationship("task", "belongs_to", board_id)
+    board_tasks = store.query_by_relationship("task", "belongs_to", board_id)
 
     # Filter to active tasks matching the query
     q = query.lower()

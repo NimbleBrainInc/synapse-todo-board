@@ -50,18 +50,21 @@ async def _calls(
     raises: tuple[str, ...] = (),
     auth: str | None = None,
     before_calls: Callable[[], Awaitable[None]] | None = None,
+    mode: str = "auto",
 ) -> list[str]:
     """Run tool calls in one session; return the notification methods seen.
 
-    Every call must succeed unless its tool is named in `raises`.
+    Every call must succeed unless its tool is named in `raises`. `mode` is
+    the client's protocol era: "auto" negotiates the sessionless 2026-07-28
+    era with this server, "legacy" the 2025-11-25 handshake era.
     """
     seen: list[str] = []
 
     async def on_message(message):
         if isinstance(message, ServerNotification):
-            seen.append(message.root.method)
+            seen.append(message.method)
 
-    async with Client(server, message_handler=on_message, auth=auth) as client:
+    async with Client(server, message_handler=on_message, auth=auth, mode=mode) as client:
         if before_calls is not None:
             await before_calls()
         for name, arguments in calls:

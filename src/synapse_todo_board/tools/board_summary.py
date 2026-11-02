@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def _parse_date(value: str | None) -> datetime | None:
@@ -12,7 +12,7 @@ def _parse_date(value: str | None) -> datetime | None:
         return None
     try:
         # Try full ISO datetime first
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value)
     except ValueError:
         pass
     try:
@@ -23,13 +23,13 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 def board_summary(
-    app: UpjackApp,
+    store: BoardStore,
     board_id: str,
 ) -> dict[str, Any]:
     """Compute aggregate metrics for a board.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         board_id: ID of the board to summarize.
 
     Returns:
@@ -38,18 +38,17 @@ def board_summary(
     """
     # 1. Load board
     try:
-        board = app.get_entity("board", board_id)
-    except FileNotFoundError:
+        board = store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     # 2. Query all active tasks for this board via relationship index
-    board_tasks = app.query_by_relationship("task", "belongs_to", board_id, limit=1000)
+    board_tasks = store.query_by_relationship("task", "belongs_to", board_id, limit=1000)
 
     # 3. Group by column
     now = datetime.now(UTC)
     today = now.date()
     columns_def = board.get("columns", [])
-    col_lookup = {c["key"]: c for c in columns_def}
 
     # Initialize per-column stats
     col_stats: dict[str, dict[str, Any]] = {}
@@ -90,7 +89,7 @@ def board_summary(
                 })
 
     # Check WIP status
-    for key, stats in col_stats.items():
+    for stats in col_stats.values():
         wip = stats["wip_limit"]
         if wip and wip > 0 and stats["count"] > wip:
             stats["wip_ok"] = False

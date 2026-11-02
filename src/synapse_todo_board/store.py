@@ -1,8 +1,9 @@
 """Board and task records, kept in the existing workspace JSON layout.
 
 Records live at ``apps/todo-board/data/{boards,tasks}/<id>.json`` under the
-workspace root, exactly where Upjack writes them, so a workspace Upjack wrote
-reads back unchanged. The server does not use this store yet.
+workspace root, exactly where Upjack wrote them, so a workspace Upjack wrote
+reads back unchanged. This is the one storage path for the server and every
+tool.
 """
 
 from __future__ import annotations
@@ -18,14 +19,39 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, ValidationError
 from ulid import ULID
 
 ENTITIES = {"board": ("boards", "bd"), "task": ("tasks", "tk")}
 IMMUTABLE = {"id", "type", "version", "created_at", "created_by"}
+# The fields the store manages on every record. Tool inputs never carry them,
+# and add_field refuses to declare one.
+BASE_FIELDS = frozenset(
+    {
+        "id",
+        "type",
+        "version",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "status",
+        "tags",
+        "source",
+        "relationships",
+    }
+)
 INDEX = "apps/todo-board/data/_index/relations.json"
 BASE_REF = "https://upjack.dev/schemas/v1/upjack-entity.schema.json"
 COMPARISONS = {"$gt": operator.gt, "$gte": operator.ge, "$lt": operator.lt, "$lte": operator.le}
+FIELD_TYPES: dict[str, type | tuple[type, ...]] = {
+    "string": str,
+    "integer": int,
+    "number": (int, float),
+    "boolean": bool,
+    "array": list,
+    "object": dict,
+}
+FIELD_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 
 Record = dict[str, Any]
 
@@ -69,17 +95,29 @@ class BoardStore:
         self.root = Path(root).resolve()
         self.project_root = Path(project_root).resolve()
         self.lock = RLock()
-        self.schemas = {kind: self._load_schema(kind) for kind in ENTITIES}
+        self.base_schema = json.loads(
+            (self.project_root / "schemas/entity.schema.json").read_text()
+        )
+        # app_schemas are the files as authored; schemas compose the base record
+        # into them for validation and for the output schemas tools publish.
+        self.app_schemas: dict[str, Record] = {}
+        self.schemas: dict[str, Record] = {}
+        for kind in ENTITIES:
+            self._load_schema(kind)
 
-    def _load_schema(self, kind: str) -> Record:
+    def _schema_path(self, kind: str) -> Path:
+        return self.project_root / "schemas" / f"{kind}.schema.json"
+
+    def _load_schema(self, kind: str) -> None:
         # The app schemas compose the remote Upjack base entity through allOf.
         # Swap that one entry for the local copy so loading never needs the network.
-        schema = json.loads((self.project_root / "schemas" / f"{kind}.schema.json").read_text())
-        base = json.loads((self.project_root / "schemas/entity.schema.json").read_text())
+        schema = json.loads(self._schema_path(kind).read_text())
+        self.app_schemas[kind] = deepcopy(schema)
         schema["allOf"] = [
-            base if part.get("$ref") == BASE_REF else part for part in schema.get("allOf", [])
+            self.base_schema if part.get("$ref") == BASE_REF else part
+            for part in schema.get("allOf", [])
         ]
-        return schema
+        self.schemas[kind] = schema
 
     def _path(self, relative: str) -> Path:
         path = self.root / relative
@@ -322,3 +360,88 @@ class BoardStore:
                             entries.append(entry)
             self._atomic(self._path(INDEX), {"reverse": reverse})
             return {"success": True, "entries": sum(map(len, reverse.values()))}
+
+    def seed(self, seed_dir: str | Path) -> Record:
+        """Create every record in the ``*.json`` files under ``seed_dir``.
+
+        A file holds one record or a list. Each keeps its ``id`` when it has
+        one, so seed files can refer to each other; the store sets the other
+        base fields. Records that fail validation or already exist are
+        reported, and the rest still load.
+        """
+        seed_dir = Path(seed_dir)
+        if not seed_dir.exists():
+            return {"error": f"Seed directory not found: {seed_dir}"}
+        loaded: list[str] = []
+        errors: list[str] = []
+        for file in sorted(seed_dir.glob("*.json")):
+            raw = json.loads(file.read_text())
+            for item in raw if isinstance(raw, list) else [raw]:
+                kind = item.get("type")
+                if not kind:
+                    errors.append(f"{file.name}: missing 'type' field")
+                    continue
+                data = {
+                    k: v
+                    for k, v in item.items()
+                    if k not in {"type", "created_at", "updated_at", "created_by"}
+                }
+                try:
+                    record = self.create_entity(kind, data, created_by="system")
+                    loaded.append(f"{kind}: {record['id']}")
+                except (ValueError, KeyError, ValidationError) as error:
+                    errors.append(f"{file.name} ({kind}): {error}")
+        return {"loaded": loaded, "errors": errors}
+
+    def add_field(
+        self,
+        kind: str,
+        field_name: str,
+        field_type: str,
+        default: Any,
+        description: str = "",
+        required: bool = True,
+    ) -> Record:
+        """Declare a new field on ``schemas/<kind>.schema.json`` and reload it.
+
+        The default always comes with the field, so every existing record
+        still validates. The file keeps its ``$ref`` to the base record.
+        """
+        if not FIELD_NAME.match(field_name):
+            return {"error": f"Invalid field_name '{field_name}'. Must match [a-z][a-z0-9_]*"}
+        if field_name in BASE_FIELDS:
+            return {"error": f"Field '{field_name}' is a reserved base entity field"}
+        if field_type not in FIELD_TYPES:
+            return {"error": f"Invalid field_type '{field_type}'. Allowed: {sorted(FIELD_TYPES)}"}
+        if not isinstance(default, FIELD_TYPES[field_type]):
+            return {
+                "error": f"Default value {default!r} is not compatible with type '{field_type}'"
+            }
+        if kind not in ENTITIES:
+            return {"error": f"Unknown entity type '{kind}'"}
+        with self.lock:
+            schema = json.loads(self._schema_path(kind).read_text())
+            properties = schema.setdefault("properties", {})
+            if field_name in properties:
+                existing = properties[field_name].get("type")
+                if existing and existing != field_type:
+                    return {"error": f"Field '{field_name}' already exists with type '{existing}'"}
+                return {"error": f"Field '{field_name}' already exists"}
+            definition: Record = {"type": field_type, "default": default}
+            if description:
+                definition["description"] = description
+            properties[field_name] = definition
+            if required and field_name not in schema.setdefault("required", []):
+                schema["required"].append(field_name)
+            self._atomic(self._schema_path(kind), schema)
+            self._load_schema(kind)
+        return {
+            "success": True,
+            "entity_type": kind,
+            "field": {
+                "name": field_name,
+                "type": field_type,
+                "default": default,
+                "required": required,
+            },
+        }

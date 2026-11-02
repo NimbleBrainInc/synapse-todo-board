@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def reorder_column(
-    app: UpjackApp,
+    store: BoardStore,
     board_id: str,
     column_key: str,
     task_ids: list[str],
@@ -14,7 +14,7 @@ def reorder_column(
     """Batch-update positions of all tasks within a column.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         board_id: ID of the board.
         column_key: Column to reorder.
         task_ids: Task IDs in desired order (index = new position).
@@ -25,8 +25,8 @@ def reorder_column(
     """
     # 1. Load board and validate column
     try:
-        board = app.get_entity("board", board_id)
-    except FileNotFoundError:
+        board = store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     columns = board.get("columns", [])
@@ -38,8 +38,8 @@ def reorder_column(
     validated: list[tuple[str, dict[str, Any]]] = []
     for tid in task_ids:
         try:
-            task = app.get_entity("task", tid)
-        except FileNotFoundError:
+            task = store.get_entity("task", tid)
+        except (FileNotFoundError, ValueError):
             return {"error": f"Task {tid} not found"}
 
         if task.get("column") != column_key:
@@ -57,7 +57,7 @@ def reorder_column(
 
     order: list[dict[str, Any]] = []
     for idx, (tid, task) in enumerate(validated):
-        app.update_entity("task", tid, {"position": idx})
+        store.update_entity("task", tid, {"position": idx})
         order.append({
             "id": tid,
             "title": task.get("title"),

@@ -1,0 +1,14 @@
+{
+  "reverse": {
+    "bd_01M6D482G20JX0DR7F4MP61BFV": [
+      {
+        "source": "tk_01M6D482GC5PRKAGFGZVH3XADD",
+        "rel": "belongs_to"
+      },
+      {
+        "source": "tk_01M6D482GETABHWHVJDFRXHPE5",
+        "rel": "belongs_to"
+      }
+    ]
+  }
+}

@@ -1,27 +1,40 @@
-"""Todo Board MCP server built with Upjack + FastMCP.
+"""Todo Board MCP server on FastMCP, reading and writing through BoardStore.
 
-Tier 2: Auto-generated entity CRUD from manifest (boards, tasks, labels).
-Tier 3: Custom domain tools for task workflow (move, reorder, archive, summary).
+The entity tools (board and task CRUD, relationships, seed, add_field,
+rebuild_index) are generated from the manifest in `entity_tools`; the domain
+tools (move, reorder, archive, summary) live in `tools`.
 """
 
+import json
 import os
 from pathlib import Path
 
-from upjack.app import UpjackApp
-from upjack.server import create_server
+from fastmcp import FastMCP
 
+from synapse_todo_board.entity_tools import instructions, register_entity_tools
 from synapse_todo_board.instructions import (
     read_custom_instructions,
     write_custom_instructions,
 )
 from synapse_todo_board.notifications import NotifyOnWrite
+from synapse_todo_board.store import BoardStore
 from synapse_todo_board.tools import register_tools
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
-manifest_path = _PROJECT_ROOT / "manifest.json"
+_manifest = json.loads((_PROJECT_ROOT / "manifest.json").read_text())
+_upjack = _manifest["_meta"]["ai.nimblebrain/upjack"]
+# Two roots, as before this module owned the store. Upjack resolved the entity
+# records under UPJACK_ROOT when it was set, else under the workspace it was
+# given; the custom instructions always lived under MPAK_WORKSPACE. Keeping
+# both means a deployment that sets UPJACK_ROOT finds its records and its
+# saved instructions where it left them.
 workspace_root = os.environ.get("MPAK_WORKSPACE", "./workspace")
-mcp = create_server(manifest_path, root=workspace_root)
+data_root = os.environ.get("UPJACK_ROOT") or workspace_root
+
+mcp = FastMCP(name=_upjack["display"]["name"], instructions=instructions(_upjack))
 mcp.add_middleware(NotifyOnWrite())
+store = BoardStore(data_root, _PROJECT_ROOT)
+register_entity_tools(mcp, store, _upjack)
 
 # Skill resource — teaches the LLM how to use this server's tools
 _SKILL_PATH = _PROJECT_ROOT / "SKILL.md"
@@ -35,7 +48,7 @@ def todo_board_skill() -> str:
 
 
 # Append board-scoping instructions — the agent MUST see this before any tool call
-mcp._mcp_server.instructions = (
+mcp.instructions = (
     (mcp.instructions or "")
     + "\n\nCRITICAL — Board Context: The UI visible state contains the active board "
     "(selectedBoard.id). Use it for ALL task operations:\n"
@@ -45,11 +58,8 @@ mcp._mcp_server.instructions = (
     "- NEVER call search_tasks or list_boards — the board context is already in the visible state."
 )
 
-# Load app instance for custom tools
-_app = UpjackApp.from_manifest(manifest_path, root=workspace_root)
-
 # Register custom domain tools
-register_tools(mcp, _app)
+register_tools(mcp, store)
 
 # UI resource — served to the platform as an iframe
 _UI_HTML = _PROJECT_ROOT / "ui" / "dist" / "index.html"

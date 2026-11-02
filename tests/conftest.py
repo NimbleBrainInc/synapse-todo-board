@@ -15,7 +15,6 @@ from typing import Any
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Async helpers — identical shape to upjack's own test helpers
 # ---------------------------------------------------------------------------
@@ -54,12 +53,12 @@ def mcp(tmp_path, monkeypatch):
     """Build a fresh synapse-todo-board MCP server bound to a tmp workspace.
 
     `synapse_todo_board.server` constructs its `FastMCP` instance at module
-    import time, so we set `UPJACK_ROOT` and `MPAK_WORKSPACE` to the test's
-    `tmp_path` and reload the module to force a re-bind.
+    import time, so we set `MPAK_WORKSPACE` to the test's `tmp_path` and
+    reload the module to force a re-bind.
     """
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    monkeypatch.setenv("UPJACK_ROOT", str(workspace))
+    monkeypatch.delenv("UPJACK_ROOT", raising=False)
     monkeypatch.setenv("MPAK_WORKSPACE", str(workspace))
 
     import synapse_todo_board.server as server_module

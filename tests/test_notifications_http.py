@@ -1,4 +1,12 @@
-"""Write notices over SSE or stateful JSON with a standing GET stream."""
+"""Write notices over HTTP, on both protocol eras the server speaks.
+
+A handshake-era client (2025-11-25, `mode="legacy"`) holds a session: SSE
+answers carry the notice on the call's own stream, and stateful JSON answers
+deliver it on the standing GET stream. A sessionless client (2026-07-28,
+`mode="auto"`) has no standing stream: an SSE answer still carries the notice
+on the call's stream, and a JSON answer has nowhere to put it, so none
+arrives. Stateless JSON delivers nothing on either era.
+"""
 
 import asyncio
 import socket
@@ -13,7 +21,11 @@ from fastmcp.server.auth.providers.debug import DebugTokenVerifier
 from .conftest import _run
 from .test_notifications import LIST_CHANGED, _calls, _toy_server
 
+SSE = b"text/event-stream"
+JSON = b"application/json"
 
+
+@pytest.mark.parametrize("mode", ["legacy", "auto"])
 @pytest.mark.parametrize(
     ("settings_json_response", "json_response_override", "stateless_http", "authenticated"),
     [
@@ -34,13 +46,19 @@ from .test_notifications import LIST_CHANGED, _calls, _toy_server
     ],
 )
 def test_write_notifications_reach_http_clients(
-    monkeypatch, settings_json_response, json_response_override, stateless_http, authenticated
+    monkeypatch,
+    settings_json_response,
+    json_response_override,
+    stateless_http,
+    authenticated,
+    mode,
 ):
     monkeypatch.setattr(fastmcp.settings, "json_response", settings_json_response)
     monkeypatch.setattr(fastmcp.settings, "stateless_http", stateless_http)
     json_response = (
         settings_json_response if json_response_override is None else json_response_override
     )
+    legacy = mode == "legacy"
     server_auth = DebugTokenVerifier() if authenticated else None
     app = _toy_server(auth=server_auth).http_app(json_response=json_response_override)
     responses = []
@@ -70,7 +88,7 @@ def test_write_notifications_reach_http_clients(
                 time.sleep(0.01)
 
             async def wait_for_get():
-                if json_response:
+                if json_response and legacy:
                     deadline = time.monotonic() + 5
                     while not any(
                         method == "GET" and status == 200 for method, status, _ in responses
@@ -78,9 +96,7 @@ def test_write_notifications_reach_http_clients(
                         assert time.monotonic() < deadline, "Standing GET stream did not connect"
                         await asyncio.sleep(0.01)
                     assert any(
-                        method == "GET"
-                        and status == 200
-                        and content.startswith(b"text/event-stream")
+                        method == "GET" and status == 200 and content.startswith(SSE)
                         for method, status, content in responses
                     ), "Stateful JSON notifications need the standing GET stream"
 
@@ -91,16 +107,27 @@ def test_write_notifications_reach_http_clients(
                     raises=("fail",),
                     auth="todo-notification-test" if authenticated else None,
                     before_calls=wait_for_get,
+                    mode=mode,
                 )
             )
-            assert seen == [LIST_CHANGED, LIST_CHANGED]
-            expected_type = b"application/json" if json_response else b"text/event-stream"
+            delivered = not json_response or (legacy and not stateless_http)
+            assert seen == ([LIST_CHANGED, LIST_CHANGED] if delivered else [])
             posts = [
                 content
                 for method, status, content in responses
                 if method == "POST" and status == 200
             ]
-            assert posts and all(content.startswith(expected_type) for content in posts)
+            assert posts
+            if legacy:
+                # A session answers every call the way the transport is set.
+                expected_type = JSON if json_response else SSE
+                assert all(content.startswith(expected_type) for content in posts)
+            else:
+                # Sessionless: only a call that carries a notice is streamed.
+                streamed = [content for content in posts if content.startswith(SSE)]
+                assert len(streamed) == (0 if json_response else 2)
+                assert all(content.startswith((SSE, JSON)) for content in posts)
+                assert not any(method == "GET" for method, _, _ in responses)
         finally:
             server.should_exit = True
             thread.join(timeout=5)

@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from upjack.app import UpjackApp
+from synapse_todo_board.store import BoardStore
 
 
 def create_board_task(
-    app: UpjackApp,
+    store: BoardStore,
     board_id: str,
     data: dict[str, Any],
 ) -> dict[str, Any]:
@@ -17,7 +17,7 @@ def create_board_task(
     appear in creation order without a follow-up ``reorder_column`` call.
 
     Args:
-        app: UpjackApp instance.
+        store: BoardStore.
         board_id: Board to create the task on.
         data: Task fields (title, column, priority, etc.). ``column`` is
             optional and defaults to the board's ``default_column`` or first
@@ -30,8 +30,8 @@ def create_board_task(
     """
     # Validate board exists
     try:
-        board = app.get_entity("board", board_id)
-    except FileNotFoundError:
+        board = store.get_entity("board", board_id)
+    except (FileNotFoundError, ValueError):
         return {"error": f"Board {board_id} not found"}
 
     columns = board.get("columns", []) or []
@@ -62,16 +62,16 @@ def create_board_task(
     # tasks via the reverse index and take max(existing_in_column) + 1 so
     # tasks land at the end of the column in creation order.
     if "position" not in data:
-        existing = app.query_by_relationship("task", "belongs_to", board_id)
+        existing = store.query_by_relationship("task", "belongs_to", board_id)
         positions = [
-            t.get("position")
+            position
             for t in existing
-            if t.get("column") == column and isinstance(t.get("position"), int)
+            if t.get("column") == column and isinstance(position := t.get("position"), int)
         ]
         data["position"] = (max(positions) + 1) if positions else 0
 
     # Auto-wire the belongs_to relationship
     data["relationships"] = [{"rel": "belongs_to", "target": board_id}]
 
-    task = app.create_entity("task", data)
+    task = store.create_entity("task", data)
     return task
