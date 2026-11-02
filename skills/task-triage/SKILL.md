@@ -1,3 +1,8 @@
+---
+name: task-triage
+description: Prioritize and suggest due dates for new Todo Board tasks, apply the side effects of column moves, and run the weekday review for overdue, stalled and over-limit work.
+---
+
 # Task Triage
 
 Automatically classify, prioritize, and organize tasks so the user spends time doing work, not managing it.

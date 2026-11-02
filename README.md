@@ -37,6 +37,17 @@ Automatically classifies, prioritizes, and organizes tasks so the user spends ti
 - **Task column changed** (hook) — reacts to moves (e.g., sets `completed_at` when moved to a done-like column)
 - **Daily review** (schedule: weekdays at 9am) — flags overdue tasks, stalled tasks, and WIP limit breaches
 
+## Skills over MCP
+
+The server serves its skills through the SEP-2640 skills extension (`io.modelcontextprotocol/skills`). `skills/list` lists each folder under `skills/`, and `skills/get` and `resources/read` serve it at `skill://<folder>/SKILL.md`. Both methods answer on 2026-07-28, the era NimbleBrain connects on, and on the older 2025-11-25 handshake era as well.
+
+| Skill | URI |
+|-------|-----|
+| `task-triage` | `skill://task-triage/SKILL.md` |
+| `todo-board-usage` | `skill://todo-board-usage/SKILL.md` |
+
+The tool guide that was the root `SKILL.md` is now the `todo-board-usage` skill. `skill://todo-board/usage` still reads the same file, and `upjack://skills/task-triage` still answers.
+
 ## UI Overview
 
 The Synapse UI provides two views, toggled via a tab bar, operating on one board at a time with a board selector in the header.
@@ -63,7 +74,9 @@ mcp-servers/todo-board/
 │   ├── board.schema.json
 │   └── task.schema.json
 ├── skills/
-│   └── task-triage/
+│   ├── task-triage/
+│   │   └── SKILL.md
+│   └── todo-board-usage/
 │       └── SKILL.md
 ├── tools/
 │   ├── move_task.py
