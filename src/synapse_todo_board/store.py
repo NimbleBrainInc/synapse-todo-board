@@ -529,11 +529,10 @@ class BoardStore:
             # the holder exits, so a killed writer leaves nothing to clean up.
             fd = os.open(lock_path, os.O_CREAT | os.O_WRONLY, 0o600)
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                os.close(fd)
-                return {"error": f"Schema extension writer already holds {kind}.fields.lock"}
-            try:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return {"error": f"Schema extension writer already holds {kind}.fields.lock"}
                 fields = self._read_fields(kind)
                 schema = self._read_schema(kind, fields)
                 properties = {

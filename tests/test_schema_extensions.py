@@ -1,5 +1,6 @@
 """Custom fields stay in the workspace across application replacement."""
 
+import errno
 import fcntl
 import importlib
 import json
@@ -211,6 +212,20 @@ def test_failed_write_preserves_extensions_and_releases_lock(setup, monkeypatch)
     assert fields_path(workspace).read_bytes() == before
     assert lock_is_free(fields_path(workspace).with_suffix(".lock"))
     assert "second" not in BoardStore(workspace, project).create_entity(KIND, DATA)
+
+
+def test_add_field_closes_lock_when_flock_fails(setup, monkeypatch):
+    store, workspace, _ = setup
+
+    def unsupported(fd, operation):
+        raise OSError(errno.ENOLCK, "No locks available")
+
+    monkeypatch.setattr(fcntl, "flock", unsupported)
+    before = len(os.listdir("/dev/fd"))
+    with pytest.raises(OSError, match="No locks available"):
+        store.add_field(KIND, "first", "string", "one")
+    assert len(os.listdir("/dev/fd")) == before
+    assert not fields_path(workspace).exists()
 
 
 HOLD_LOCK = """
