@@ -8,6 +8,7 @@ tool.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import operator
 import os
@@ -146,7 +147,7 @@ class BoardStore:
     def _read_schema(self, kind: str, fields: dict[str, Any] | None = None) -> dict[str, Any]:
         try:
             schema = json.loads(self._schema_path(kind).read_text())
-        except (OSError, ValueError, TypeError, AttributeError):
+        except (OSError, ValueError):
             raise SchemaExtensionError(f"Cannot load {kind} bundled schema") from None
         if not isinstance(schema, dict) or not isinstance(schema.get("properties", {}), dict):
             raise SchemaExtensionError(f"Invalid {kind} bundled schema")
@@ -160,7 +161,10 @@ class BoardStore:
                 or name in self.base_schema.get("properties", {})
                 or name in properties
             ):
-                raise SchemaExtensionError(f"Invalid or colliding {kind} schema extension: {name}")
+                raise SchemaExtensionError(
+                    f"Invalid or colliding {kind} schema extension: {name}"
+                    f" in {self._fields_path(kind)}"
+                )
             if (
                 not isinstance(field, dict)
                 or not {"type", "default", "required"} <= field.keys()
@@ -521,11 +525,14 @@ class BoardStore:
             path = self._fields_path(kind)
             lock_path = self._path(f"apps/todo-board/schemas/{kind}.fields.lock")
             lock_path.parent.mkdir(parents=True, exist_ok=True)
+            # The lock is the flock, not the file: the kernel releases it when
+            # the holder exits, so a killed writer leaves nothing to clean up.
+            fd = os.open(lock_path, os.O_CREAT | os.O_WRONLY, 0o600)
             try:
-                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            except FileExistsError:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                os.close(fd)
                 return {"error": f"Schema extension writer already holds {kind}.fields.lock"}
-            os.close(fd)
             try:
                 fields = self._read_fields(kind)
                 schema = self._read_schema(kind, fields)
@@ -552,7 +559,7 @@ class BoardStore:
                 self._atomic(path, {"version": 1, "fields": fields})
                 self._load_schema(kind, schema)
             finally:
-                lock_path.unlink()
+                os.close(fd)
         return {
             "success": True,
             "entity_type": kind,

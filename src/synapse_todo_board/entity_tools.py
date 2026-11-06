@@ -353,8 +353,9 @@ def _register_utilities(mcp: FastMCP, store: BoardStore, upjack: Record) -> None
     @mcp.tool(
         name="add_field",
         description=(
-            "Add a new field to an entity schema. Validates the change is safe, "
-            "writes the updated schema to disk, and reloads it."
+            "Add a new field to an entity type. Validates the change is safe, "
+            "saves the field declaration in the workspace, and reloads the schema. "
+            "Create and update tools list the field after the server restarts."
         ),
     )
     def add_field(

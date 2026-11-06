@@ -1,8 +1,13 @@
 """Custom fields stay in the workspace across application replacement."""
 
+import fcntl
 import importlib
 import json
+import os
 import shutil
+import signal
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -25,6 +30,17 @@ def setup(tmp_path):
 
 def fields_path(workspace):
     return workspace / "apps/todo-board/schemas" / f"{KIND}.fields.json"
+
+
+def lock_is_free(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        return False
+    finally:
+        os.close(fd)
 
 
 def test_fields_survive_restart_and_package_replacement_without_record_edits(setup, tmp_path):
@@ -73,6 +89,14 @@ def test_supported_defaults_and_optional_metadata_round_trip(setup, field_type, 
     assert BoardStore(workspace, project).create_entity(KIND, DATA)["extra"] == default
 
 
+@pytest.mark.parametrize("field_type", ["integer", "number"])
+def test_add_field_boolean_numeric_default_returns_error(setup, field_type):
+    store, workspace, _ = setup
+    result = store.add_field(KIND, "extra", field_type, True)
+    assert "not compatible" in result["error"]
+    assert not fields_path(workspace).exists()
+
+
 @pytest.mark.parametrize(
     "raw",
     [
@@ -119,7 +143,7 @@ def test_malformed_or_colliding_fields_refuse_load_and_add_without_overwrite(set
         store.list_entities(KIND)
     assert path.read_text() == raw
     assert {path: path.read_bytes() for path in before} == before
-    assert not path.with_suffix(".lock").exists()
+    assert lock_is_free(path.with_suffix(".lock"))
 
 
 @pytest.mark.parametrize("schema_name", [KIND, "entity"])
@@ -185,8 +209,42 @@ def test_failed_write_preserves_extensions_and_releases_lock(setup, monkeypatch)
     with pytest.raises(OSError, match="test write failure"):
         store.add_field(KIND, "second", "integer", 2)
     assert fields_path(workspace).read_bytes() == before
-    assert not fields_path(workspace).with_suffix(".lock").exists()
+    assert lock_is_free(fields_path(workspace).with_suffix(".lock"))
     assert "second" not in BoardStore(workspace, project).create_entity(KIND, DATA)
+
+
+HOLD_LOCK = """
+import sys, time
+from synapse_todo_board.store import BoardStore
+
+store = BoardStore(sys.argv[1], sys.argv[2])
+
+def hold(path, value):
+    print("held", flush=True)
+    time.sleep(60)
+
+store._atomic = hold
+store.add_field("board", "first", "string", "one")
+"""
+
+
+def test_add_field_lock_released_when_writer_killed(setup):
+    store, workspace, project = setup
+    child = subprocess.Popen(
+        [sys.executable, "-c", HOLD_LOCK, str(workspace), str(project)],
+        stdout=subprocess.PIPE,
+        text=True,
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+    )
+    try:
+        assert child.stdout.readline() == "held\n"
+        assert "writer" in store.add_field(KIND, "second", "string", "two")["error"]
+    finally:
+        child.kill()
+        child.wait()
+    assert child.returncode == -signal.SIGKILL
+    assert store.add_field(KIND, "second", "string", "two")["success"]
+    assert set(json.loads(fields_path(workspace).read_text())["fields"]) == {"second"}
 
 
 def test_restart_exposes_fields_to_mcp_create_and_update(setup):
