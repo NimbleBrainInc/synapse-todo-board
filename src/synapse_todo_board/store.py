@@ -88,6 +88,23 @@ def _matches_filter(entity: Record, filters: Record | None) -> bool:
     return True
 
 
+class SchemaExtensionError(RuntimeError):
+    """Workspace declarations cannot be safely merged with the installed schema.
+
+    Not a ``ValueError``, so callers that treat a bad ID or record as "not found"
+    do not hide a failure that affects every record of that kind.
+    """
+
+
+def _unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate schema extension key: {key}")
+        result[key] = value
+    return result
+
+
 class BoardStore:
     """Read and write board and task records under one workspace root."""
 
@@ -98,20 +115,84 @@ class BoardStore:
         self.base_schema = json.loads(
             (self.project_root / "schemas/entity.schema.json").read_text()
         )
-        # app_schemas are the files as authored; schemas compose the base record
+        # app_schemas include workspace fields; schemas compose the base record
         # into them for validation and for the output schemas tools publish.
         self.app_schemas: dict[str, Record] = {}
         self.schemas: dict[str, Record] = {}
         for kind in ENTITIES:
             self._load_schema(kind)
 
+    def _fields_path(self, kind: str) -> Path:
+        return self._path(f"apps/todo-board/schemas/{kind}.fields.json")
+
+    def _read_fields(self, kind: str) -> dict[str, Any]:
+        try:
+            path = self._fields_path(kind)
+            data = json.loads(path.read_text(), object_pairs_hook=_unique_keys)
+        except FileNotFoundError:
+            return {}
+        except (OSError, ValueError) as error:
+            raise SchemaExtensionError(f"Invalid {kind} schema extensions: {error}") from None
+        if (
+            not isinstance(data, dict)
+            or set(data) != {"version", "fields"}
+            or type(data["version"]) is not int
+            or data["version"] != 1
+            or not isinstance(data["fields"], dict)
+        ):
+            raise SchemaExtensionError(f"Invalid {kind} schema extensions")
+        return data["fields"]
+
+    def _read_schema(self, kind: str, fields: dict[str, Any] | None = None) -> dict[str, Any]:
+        try:
+            schema = json.loads(self._schema_path(kind).read_text())
+        except (OSError, ValueError, TypeError, AttributeError):
+            raise SchemaExtensionError(f"Cannot load {kind} bundled schema") from None
+        if not isinstance(schema, dict) or not isinstance(schema.get("properties", {}), dict):
+            raise SchemaExtensionError(f"Invalid {kind} bundled schema")
+        if fields is None:
+            fields = self._read_fields(kind)
+        properties = schema.setdefault("properties", {})
+        for name, field in fields.items():
+            if (
+                not re.fullmatch(r"[a-z][a-z0-9_]*", name)
+                or name in BASE_FIELDS
+                or name in self.base_schema.get("properties", {})
+                or name in properties
+            ):
+                raise SchemaExtensionError(f"Invalid or colliding {kind} schema extension: {name}")
+            if (
+                not isinstance(field, dict)
+                or not {"type", "default", "required"} <= field.keys()
+                or field.keys() - {"type", "default", "required", "description"}
+                or not isinstance(field["type"], str)
+                or field["type"] not in FIELD_TYPES
+                or not isinstance(field["required"], bool)
+                or not isinstance(field.get("description", ""), str)
+            ):
+                raise SchemaExtensionError(f"Invalid {kind} schema extension: {name}")
+            if not Draft202012Validator({"type": field["type"]}).is_valid(field["default"]):
+                raise SchemaExtensionError(f"Invalid {kind} schema extension default: {name}")
+            # JSON permits no NaN or infinity, including inside array/object defaults.
+            try:
+                json.dumps(field["default"], allow_nan=False)
+            except (ValueError, TypeError):
+                raise SchemaExtensionError(
+                    f"Invalid {kind} schema extension default: {name}"
+                ) from None
+            properties[name] = {key: value for key, value in field.items() if key != "required"}
+            if field["required"]:
+                schema.setdefault("required", []).append(name)
+        return schema
+
     def _schema_path(self, kind: str) -> Path:
         return self.project_root / "schemas" / f"{kind}.schema.json"
 
-    def _load_schema(self, kind: str) -> None:
+    def _load_schema(self, kind: str, schema: Record | None = None) -> None:
         # The app schemas compose the remote Upjack base entity through allOf.
         # Swap that one entry for the local copy so loading never needs the network.
-        schema = json.loads(self._schema_path(kind).read_text())
+        if schema is None:
+            schema = self._read_schema(kind)
         self.app_schemas[kind] = deepcopy(schema)
         schema["allOf"] = [
             self.base_schema if part.get("$ref") == BASE_REF else part
@@ -152,7 +233,10 @@ class BoardStore:
 
     def _save(self, kind: str, record: Record, old_edges: list, validate: bool = True) -> Record:
         if validate:
-            Draft202012Validator(self.schemas[kind]).validate(record)
+            self._load_schema(kind)
+            schema = self.schemas[kind]
+            record = self._hydrate(kind, record, schema)
+            Draft202012Validator(schema).validate(record)
         self._atomic(self._entity_path(kind, record["id"]), record)
         # Upjack patches this index on its own writes and trusts it on reads,
         # so keep it whole. It holds every status, so only edge changes matter.
@@ -160,10 +244,13 @@ class BoardStore:
             self.rebuild_index()
         return deepcopy(record)
 
-    def _hydrate(self, kind: str, record: Record) -> Record:
+    def _hydrate(self, kind: str, record: Record, schema: Record | None = None) -> Record:
+        if schema is None:
+            self._load_schema(kind)
+            schema = self.schemas[kind]
         record = deepcopy(record)
-        for schema in [*self.schemas[kind].get("allOf", []), self.schemas[kind]]:
-            for field, definition in schema.get("properties", {}).items():
+        for part in [*schema.get("allOf", []), schema]:
+            for field, definition in part.get("properties", {}).items():
                 if field not in record and "default" in definition:
                     record[field] = deepcopy(definition["default"])
         return record
@@ -211,15 +298,22 @@ class BoardStore:
             return self._save(kind, record, old_edges)
 
     def _all(self, kind: str) -> list[Record]:
+        # One schema read per listing, so every record gets the same defaults.
+        with self.lock:
+            self._load_schema(kind)
+            schema = self.schemas[kind]
         directory = self._path(f"apps/todo-board/data/{ENTITIES[kind][0]}")
         records = []
         for path in sorted(directory.glob("*.json")):
-            try:
-                records.append(self.get_entity(kind, path.stem))
-            except (OSError, TypeError, ValueError):
-                # Not a readable record: a stray file, a non-object, a path
-                # outside the workspace, or a file deleted since the glob.
-                continue
+            with self.lock:
+                try:
+                    record = json.loads(self._entity_path(kind, path.stem).read_text())
+                    if not isinstance(record, dict):
+                        continue
+                except (OSError, TypeError, ValueError):
+                    # Skip unreadable records, never shared schema failures.
+                    continue
+                records.append(self._hydrate(kind, record, schema))
         return records
 
     def list_entities(
@@ -402,39 +496,63 @@ class BoardStore:
         description: str = "",
         required: bool = True,
     ) -> Record:
-        """Declare a new field on ``schemas/<kind>.schema.json`` and reload it.
+        """Save a field in the workspace and reload the composed schema.
 
-        The default always comes with the field, so every existing record
-        still validates. The file keeps its ``$ref`` to the base record.
+        Missing fields take their defaults in memory; existing values and
+        record files remain unchanged.
         """
-        if not FIELD_NAME.match(field_name):
+        if not FIELD_NAME.fullmatch(field_name):
             return {"error": f"Invalid field_name '{field_name}'. Must match [a-z][a-z0-9_]*"}
         if field_name in BASE_FIELDS:
             return {"error": f"Field '{field_name}' is a reserved base entity field"}
         if field_type not in FIELD_TYPES:
             return {"error": f"Invalid field_type '{field_type}'. Allowed: {sorted(FIELD_TYPES)}"}
-        if not isinstance(default, FIELD_TYPES[field_type]):
+        if not isinstance(default, FIELD_TYPES[field_type]) or (
+            field_type != "boolean" and isinstance(default, bool)
+        ):
             return {
                 "error": f"Default value {default!r} is not compatible with type '{field_type}'"
             }
         if kind not in ENTITIES:
             return {"error": f"Unknown entity type '{kind}'"}
+        if not isinstance(required, bool) or not isinstance(description, str):
+            return {"error": "required must be boolean and description must be string"}
         with self.lock:
-            schema = json.loads(self._schema_path(kind).read_text())
-            properties = schema.setdefault("properties", {})
-            if field_name in properties:
-                existing = properties[field_name].get("type")
-                if existing and existing != field_type:
-                    return {"error": f"Field '{field_name}' already exists with type '{existing}'"}
-                return {"error": f"Field '{field_name}' already exists"}
-            definition: Record = {"type": field_type, "default": default}
-            if description:
-                definition["description"] = description
-            properties[field_name] = definition
-            if required and field_name not in schema.setdefault("required", []):
-                schema["required"].append(field_name)
-            self._atomic(self._schema_path(kind), schema)
-            self._load_schema(kind)
+            path = self._fields_path(kind)
+            lock_path = self._path(f"apps/todo-board/schemas/{kind}.fields.lock")
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            except FileExistsError:
+                return {"error": f"Schema extension writer already holds {kind}.fields.lock"}
+            os.close(fd)
+            try:
+                fields = self._read_fields(kind)
+                schema = self._read_schema(kind, fields)
+                properties = {
+                    **self.base_schema.get("properties", {}),
+                    **schema.get("properties", {}),
+                }
+                if field_name in properties:
+                    existing = properties[field_name].get("type")
+                    if existing and existing != field_type:
+                        return {
+                            "error": f"Field '{field_name}' already exists with type '{existing}'"
+                        }
+                    return {"error": f"Field '{field_name}' already exists"}
+                definition: dict[str, Any] = {
+                    "type": field_type,
+                    "default": deepcopy(default),
+                    "required": required,
+                }
+                if description:
+                    definition["description"] = description
+                fields[field_name] = definition
+                schema = self._read_schema(kind, fields)
+                self._atomic(path, {"version": 1, "fields": fields})
+                self._load_schema(kind, schema)
+            finally:
+                lock_path.unlink()
         return {
             "success": True,
             "entity_type": kind,

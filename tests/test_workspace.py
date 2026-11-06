@@ -135,7 +135,7 @@ def test_seed_data_loads_the_sample_boards_with_their_stable_ids(mcp):
     assert len(again["errors"]) == len(boards)  # the fixed ids already exist
 
 
-def test_add_field_rewrites_the_schema_file_and_reloads_it(tmp_path):
+def test_add_field_writes_workspace_fields_and_reloads_them(tmp_path):
     project = tmp_path / "project"
     shutil.copytree(PROJECT_ROOT / "schemas", project / "schemas")
     store = BoardStore(tmp_path / "workspace", project)
@@ -148,12 +148,16 @@ def test_add_field_rewrites_the_schema_file_and_reloads_it(tmp_path):
         "entity_type": "task",
         "field": {"name": "estimate", "type": "integer", "default": 0, "required": True},
     }
-    schema = json.loads((project / "schemas/task.schema.json").read_text())
-    assert schema["properties"]["estimate"] == {
+    saved = json.loads(
+        (tmp_path / "workspace/apps/todo-board/schemas/task.fields.json").read_text()
+    )
+    assert saved["fields"]["estimate"] == {
         "type": "integer",
         "default": 0,
         "description": "Points",
+        "required": True,
     }
+    schema = store.app_schemas["task"]
     assert "estimate" in schema["required"]
     assert schema["allOf"] == [{"$ref": "https://upjack.dev/schemas/v1/upjack-entity.schema.json"}]
     task = store.create_entity(
