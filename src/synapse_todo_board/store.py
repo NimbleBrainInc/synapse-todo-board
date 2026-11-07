@@ -156,7 +156,7 @@ class BoardStore:
         properties = schema.setdefault("properties", {})
         for name, field in fields.items():
             if (
-                not re.fullmatch(r"[a-z][a-z0-9_]*", name)
+                not FIELD_NAME.fullmatch(name)
                 or name in BASE_FIELDS
                 or name in self.base_schema.get("properties", {})
                 or name in properties
@@ -236,6 +236,7 @@ class BoardStore:
                 os.unlink(temporary)
 
     def _save(self, kind: str, record: Record, old_edges: list, validate: bool = True) -> Record:
+        # Reads reload the declarations, so a field another server process adds applies at once.
         if validate:
             self._load_schema(kind)
             schema = self.schemas[kind]
@@ -511,9 +512,17 @@ class BoardStore:
             return {"error": f"Field '{field_name}' is a reserved base entity field"}
         if field_type not in FIELD_TYPES:
             return {"error": f"Invalid field_type '{field_type}'. Allowed: {sorted(FIELD_TYPES)}"}
-        if not isinstance(default, FIELD_TYPES[field_type]) or (
-            field_type != "boolean" and isinstance(default, bool)
-        ):
+        # bool is an int subclass, so a True default is checked by name.
+        fits = isinstance(default, FIELD_TYPES[field_type]) and (
+            field_type == "boolean" or not isinstance(default, bool)
+        )
+        if fits:
+            # JSON permits no NaN or infinity, including inside array/object defaults.
+            try:
+                json.dumps(default, allow_nan=False)
+            except (ValueError, TypeError):
+                fits = False
+        if not fits:
             return {
                 "error": f"Default value {default!r} is not compatible with type '{field_type}'"
             }
@@ -532,7 +541,10 @@ class BoardStore:
                 try:
                     fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
-                    return {"error": f"Schema extension writer already holds {kind}.fields.lock"}
+                    return {
+                        "error": f"Schema extension writer already holds {kind}.fields.lock;"
+                        " retry after it finishes"
+                    }
                 fields = self._read_fields(kind)
                 schema = self._read_schema(kind, fields)
                 properties = {

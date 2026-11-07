@@ -99,6 +99,18 @@ def test_add_field_boolean_numeric_default_returns_error(setup, field_type):
 
 
 @pytest.mark.parametrize(
+    "field_type,default",
+    [("number", float("nan")), ("number", float("inf")), ("array", [float("nan")])],
+)
+def test_add_field_returns_error_for_non_json_default(setup, field_type, default):
+    store, workspace, _ = setup
+    result = store.add_field(KIND, "extra", field_type, default)
+    assert "is not compatible" in result["error"]
+    assert not fields_path(workspace).exists()
+    assert not fields_path(workspace).with_suffix(".lock").exists()
+
+
+@pytest.mark.parametrize(
     "raw",
     [
         "",
