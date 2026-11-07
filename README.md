@@ -137,3 +137,29 @@ cd ui && npm install && npm run build
 ## Seed Data
 
 The `seed/` directory contains sample data (2 boards, 8 tasks) loaded automatically via `run_on_install`. Boards include "Sprint 14" (4-column workflow) and "Personal" (3-column workflow), with tasks spread across columns at various priorities and due dates.
+
+## Custom field storage
+
+`add_field` stores declarations in `apps/todo-board/schemas/<kind>.fields.json`
+under the workspace root. Each file contains `{"version": 1, "fields": {...}}`;
+fields carry their type, default, required flag and optional description. Bundled
+`schemas/*.schema.json` stay unchanged. Missing values take the field default in
+memory, and existing record values and metadata are retained. The generated CRUD
+tool argument schemas include new fields after the server restarts.
+
+Malformed declarations or a name that collides with a bundled or base field stop
+schema loading; neither side silently overrides the other. To recover, remove or
+rename the entry in `apps/todo-board/schemas/<kind>.fields.json` and restart. Record
+values stay as they are, and renaming does not move them. If the bundled field has
+a different type, change those records' values too, or updates to them fail
+validation. Field additions hold an exclusive lock on
+`<kind>.fields.lock` in the same workspace directory, so two server processes
+sharing one workspace cannot both rewrite the declarations. A competing writer gets an
+error and may retry after the first call finishes. The operating system releases
+the lock when its process exits, so a crashed writer leaves nothing to remove.
+
+Customizations already present in bundled schema files remain readable in place.
+This does not migrate them: retain the customized installation and a recoverable
+copy before replacing it, then explicitly reconcile its field definitions with
+the replacement package and workspace declarations. Do not replace a customized
+package until that migration is complete.
